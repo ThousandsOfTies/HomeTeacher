@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeTeacher - スタンドアロン版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .info-banner {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 1rem;
+            text-align: center;
+            color: #0c5460;
+        }
+
+        .file-selector {
+            padding: 1rem;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-selector label {
+            font-weight: 500;
+        }
+
+        .file-selector input[type="file"] {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .app-main {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .toolbar button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ccc;
+            background-color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .toolbar button:hover:not(:disabled) {
+            background-color: #f0f0f0;
+            border-color: #999;
+        }
+
+        .toolbar button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .toolbar button.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        .page-info {
+            padding: 0 1rem;
+            font-weight: 500;
+        }
+
+        .divider {
+            width: 1px;
+            height: 24px;
+            background-color: #ddd;
+            margin: 0 0.5rem;
+        }
+
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .color-picker label {
+            font-size: 0.9rem;
+        }
+
+        .color-picker input[type="color"] {
+            width: 40px;
+            height: 30px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .canvas-container {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .canvas-wrapper.active {
+            display: block;
+        }
+
+        #imageCanvas {
+            display: block;
+            background-color: white;
+        }
+
+        .loading, .welcome {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .welcome h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .welcome p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 1.5rem;
+            margin: 1rem;
+            border-radius: 4px;
+        }
+
+        .instructions h3 {
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+            color: #856404;
+        }
+
+        .instructions li {
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="app-header">
+            <h1>HomeTeacher - 手書き学習アプリ（スタンドアロン版）</h1>
+        </header>
+
+        <div class="info-banner">
+            <strong>📝 シンプル版:</strong> PDFや画像ファイルに手書きで解答を書き込めます。VSCode内で完結します。
+        </div>
+
+        <div class="file-selector">
+            <label for="fileInput">📁 ファイルを選択:</label>
+            <input type="file" id="fileInput" accept="application/pdf,image/*">
+            <span id="fileName" style="color: #666; font-size: 0.9rem;"></span>
+        </div>
+
+        <div class="instructions">
+            <h3>使い方</h3>
+            <ol>
+                <li>上の「ファイルを選択」からPDFまたは画像ファイルを選択</li>
+                <li>「ペンモード」をクリックして描画モードを有効化</li>
+                <li>マウスで解答を書き込む（色や太さも変更可能）</li>
+                <li>「ダウンロード」で書き込んだ内容を保存できます</li>
+            </ol>
+        </div>
+
+        <main class="app-main">
+            <div class="toolbar">
+                <button id="prevPage" disabled>◀ 前</button>
+                <span class="page-info">
+                    <span id="pageInfo">ページ: -</span>
+                </span>
+                <button id="nextPage" disabled>次 ▶</button>
+                <div class="divider"></div>
+                <button id="drawingMode">✏️ ペンモード</button>
+                <div class="color-picker">
+                    <label>色:</label>
+                    <input type="color" id="penColor" value="#ff0000">
+                </div>
+                <div class="color-picker">
+                    <label>太さ:</label>
+                    <input type="range" id="penWidth" min="1" max="10" value="3" style="width: 80px;">
+                    <span id="widthValue">3</span>
+                </div>
+                <button id="clearBtn">🗑️ クリア</button>
+                <button id="downloadBtn" style="margin-left: auto; background: #2196F3; color: white;">💾 ダウンロード</button>
+            </div>
+
+            <div class="canvas-container">
+                <div id="welcome" class="welcome">
+                    <h2>👋 ようこそ！</h2>
+                    <p>上の「ファイルを選択」からPDFや画像を読み込んでください。</p>
+                </div>
+                <div id="loading" class="loading" style="display: none;">
+                    読み込み中...
+                </div>
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // PDF.js設定
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // グローバル変数
+        let canvas = document.getElementById('imageCanvas');
+        let ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let drawingEnabled = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentPenColor = '#ff0000';
+        let currentPenWidth = 3;
+        let drawingLayer = null;
+        let backgroundImage = null;
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // DOM要素
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const drawingModeBtn = document.getElementById('drawingMode');
+        const penColorInput = document.getElementById('penColor');
+        const penWidthInput = document.getElementById('penWidth');
+        const widthValue = document.getElementById('widthValue');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        const pageInfo = document.getElementById('pageInfo');
+        const welcome = document.getElementById('welcome');
+        const loading = document.getElementById('loading');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+
+        // ファイル選択
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileName.textContent = file.name;
+            welcome.style.display = 'none';
+            loading.style.display = 'block';
+            canvasWrapper.classList.remove('active');
+
+            try {
+                if (file.type === 'application/pdf') {
+                    await loadPDF(file);
+                } else {
+                    await loadImage(file);
+                }
+                loading.style.display = 'none';
+                canvasWrapper.classList.add('active');
+            } catch (error) {
+                console.error('ファイル読み込みエラー:', error);
+                alert('ファイルの読み込みに失敗しました: ' + error.message);
+                loading.style.display = 'none';
+                welcome.style.display = 'block';
+            }
+        });
+
+        // PDF読み込み
+        async function loadPDF(file) {
+            if (typeof pdfjsLib === 'undefined') {
+                throw new Error('PDF.jsが読み込まれていません。画像ファイルをお試しください。');
+            }
+
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            pdfDoc = await loadingTask.promise;
+            totalPages = pdfDoc.numPages;
+            currentPage = 1;
+
+            await renderPDFPage(currentPage);
+            updatePageButtons();
+        }
+
+        // PDFページレンダリング
+        async function renderPDFPage(pageNum) {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            // 背景をクリア
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // PDFをレンダリング
+            await page.render({
+                canvasContext: ctx,
+                viewport: viewport
+            }).promise;
+
+            // 現在のキャンバスの内容を背景画像として保存
+            backgroundImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // 描画レイヤーをクリア
+            if (drawingLayer) {
+                drawingLayer = ctx.createImageData(canvas.width, canvas.height);
+            }
+
+            pageInfo.textContent = `ページ: ${pageNum} / ${totalPages}`;
+        }
+
+        // 画像読み込み
+        async function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+
+                        // 背景画像として保存
+                        backgroundImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        drawingLayer = null;
+
+                        pdfDoc = null;
+                        totalPages = 1;
+                        currentPage = 1;
+                        pageInfo.textContent = '画像';
+                        updatePageButtons();
+
+                        resolve();
+                    };
+                    img.onerror = () => reject(new Error('画像の読み込みに失敗しました'));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error('ファイルの読み取りに失敗しました'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ページボタン更新
+        function updatePageButtons() {
+            prevBtn.disabled = !pdfDoc || currentPage <= 1;
+            nextBtn.disabled = !pdfDoc || currentPage >= totalPages;
+        }
+
+        // 前のページ
+        prevBtn.addEventListener('click', async () => {
+            if (currentPage > 1) {
+                currentPage--;
+                await renderPDFPage(currentPage);
+                updatePageButtons();
+            }
+        });
+
+        // 次のページ
+        nextBtn.addEventListener('click', async () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                await renderPDFPage(currentPage);
+                updatePageButtons();
+            }
+        });
+
+        // 描画モード切り替え
+        drawingModeBtn.addEventListener('click', () => {
+            drawingEnabled = !drawingEnabled;
+            if (drawingEnabled) {
+                drawingModeBtn.classList.add('active');
+                drawingModeBtn.textContent = '✓ ペンモード';
+                canvas.style.cursor = 'crosshair';
+            } else {
+                drawingModeBtn.classList.remove('active');
+                drawingModeBtn.textContent = '✏️ ペンモード';
+                canvas.style.cursor = 'default';
+            }
+        });
+
+        // ペン色変更
+        penColorInput.addEventListener('change', (e) => {
+            currentPenColor = e.target.value;
+        });
+
+        // ペン太さ変更
+        penWidthInput.addEventListener('input', (e) => {
+            currentPenWidth = parseInt(e.target.value);
+            widthValue.textContent = currentPenWidth;
+        });
+
+        // クリア
+        clearBtn.addEventListener('click', () => {
+            if (backgroundImage) {
+                ctx.putImageData(backgroundImage, 0, 0);
+                drawingLayer = null;
+            }
+        });
+
+        // ダウンロード
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `解答_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // 描画イベント
+        canvas.addEventListener('mousedown', (e) => {
+            if (!drawingEnabled) return;
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing || !drawingEnabled) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            ctx.strokeStyle = currentPenColor;
+            ctx.lineWidth = currentPenWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            lastX = x;
+            lastY = y;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+
+        // タッチイベント対応
+        canvas.addEventListener('touchstart', (e) => {
+            if (!drawingEnabled) return;
+            e.preventDefault();
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            lastX = touch.clientX - rect.left;
+            lastY = touch.clientY - rect.top;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!isDrawing || !drawingEnabled) return;
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+
+            ctx.strokeStyle = currentPenColor;
+            ctx.lineWidth = currentPenWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            lastX = x;
+            lastY = y;
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isDrawing = false;
+        });
+    </script>
+</body>
+</html>
