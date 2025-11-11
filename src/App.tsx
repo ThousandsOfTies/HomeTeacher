@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import AdminPanel from './components/AdminPanel'
-import PDFViewer from './components/PDFViewer'
+import AdminPanel from './components/admin/AdminPanel'
+import PDFViewer from './components/pdf/PDFViewer'
 import { PDFFileRecord } from './utils/indexedDB'
 
 type AppView = 'admin' | 'viewer'

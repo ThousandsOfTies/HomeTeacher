@@ -4,6 +4,11 @@ import { gradeWork, GradingResult as GradingResultType } from '../services/api'
 import GradingResult from './grading/GradingResult'
 import { savePDFRecord, getPDFRecord, getAllSNSLinks, SNSLinkRecord, PDFFileRecord, saveGradingHistory, generateGradingHistoryId } from '../utils/indexedDB'
 import { ICON_SVG } from '../constants/icons.tsx'
+import { usePDFRenderer } from '../hooks/pdf/usePDFRenderer'
+import { useDrawing, DrawingPath } from '../hooks/pdf/useDrawing'
+import { useZoomPan } from '../hooks/pdf/useZoomPan'
+import { useEraser } from '../hooks/pdf/useEraser'
+import { useSelection, SelectionRect } from '../hooks/pdf/useSelection'
 import './PDFViewer.css'
 
 // PDF.jsのworkerを設定（CDNから読み込み）
@@ -15,57 +20,11 @@ interface PDFViewerProps {
   onBack?: () => void // 管理画面に戻るコールバック
 }
 
-// 描画パスの型定義
-type DrawingPath = {
-  points: { x: number; y: number }[]
-  color: string
-  width: number
-}
-
-// 矩形選択の型定義
-type SelectionRect = {
-  startX: number
-  startY: number
-  endX: number
-  endY: number
-} | null
-
 const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingCanvasRef = useRef<HTMLCanvasElement>(null)
   const selectionCanvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [pageNum, setPageNum] = useState(1)
-  const [numPages, setNumPages] = useState(0)
-  const [isDrawingMode, setIsDrawingMode] = useState(false)
-  const [isEraserMode, setIsEraserMode] = useState(false)
-  const [isCurrentlyDrawing, setIsCurrentlyDrawing] = useState(false)
-  const [isErasing, setIsErasing] = useState(false)
-
-  // ペンの設定
-  const [penColor, setPenColor] = useState('#FF0000')
-  const [penSize, setPenSize] = useState(3)
-  const [showPenPopup, setShowPenPopup] = useState(false)
-
-  // 消しゴムの設定
-  const [eraserSize, setEraserSize] = useState(20)
-  const [showEraserPopup, setShowEraserPopup] = useState(false)
-  const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isGrading, setIsGrading] = useState(false)
-  const [gradingResult, setGradingResult] = useState<GradingResultType | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [gradingError, setGradingError] = useState<string | null>(null)
-  const [scale, setScale] = useState(1)
-  const [isPanning, setIsPanning] = useState(false)
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 })
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-
-  // 矩形選択の状態
-  const [isSelectionMode, setIsSelectionMode] = useState(false)
-  const [isSelecting, setIsSelecting] = useState(false)
-  const [selectionRect, setSelectionRect] = useState<SelectionRect>(null)
-  const [selectionPreview, setSelectionPreview] = useState<string | null>(null)
 
   // ステータスバー用のメッセージ
   const [statusMessages, setStatusMessages] = useState<string[]>([])
@@ -75,6 +34,96 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     setStatusMessages(prev => [...prev, fullMessage].slice(-20)) // 最新20件のみ保持
     console.log(fullMessage)
   }
+
+  // usePDFRenderer hook を使用してPDF読み込みを管理
+  const {
+    pdfDoc,
+    pageNum,
+    setPageNum,
+    numPages,
+    isLoading,
+    error,
+    goToPrevPage,
+    goToNextPage
+  } = usePDFRenderer(pdfRecord, containerRef, canvasRef, {
+    onLoadStart: () => {
+      addStatusMessage('💾 PDFを読み込み中...')
+    },
+    onLoadSuccess: (numPages) => {
+      addStatusMessage(`✅ PDF読み込み成功: ${numPages}ページ`)
+    },
+    onLoadError: (errorMsg) => {
+      addStatusMessage(`❌ ${errorMsg}`)
+    }
+  })
+
+  // レンダリングタスク管理用（PDFViewer側で管理）
+  const renderTaskRef = useRef<any>(null)
+
+  // useDrawing hook を使用して描画機能を管理
+  const {
+    drawingPaths,
+    setDrawingPaths,
+    isCurrentlyDrawing,
+    startDrawing: hookStartDrawing,
+    continueDrawing: hookContinueDrawing,
+    stopDrawing: hookStopDrawing,
+    clearDrawing: hookClearDrawing,
+    clearAllDrawings: hookClearAllDrawings,
+    redrawPaths
+  } = useDrawing(pageNum)
+
+  // useZoomPan hook を使用してズーム・パン機能を管理
+  const {
+    scale,
+    setScale,
+    isPanning,
+    panOffset,
+    setPanOffset,
+    isCtrlPressed,
+    startPanning,
+    doPanning,
+    stopPanning,
+    resetZoom: hookResetZoom
+  } = useZoomPan(containerRef)
+
+  const [isDrawingMode, setIsDrawingMode] = useState(false)
+  const [isEraserMode, setIsEraserMode] = useState(false)
+
+  // ペンの設定
+  const [penColor, setPenColor] = useState('#FF0000')
+  const [penSize, setPenSize] = useState(3)
+  const [showPenPopup, setShowPenPopup] = useState(false)
+
+  // 消しゴムの設定
+  const [eraserSize, setEraserSize] = useState(20)
+  const [showEraserPopup, setShowEraserPopup] = useState(false)
+
+  // useEraser hook を使用して消しゴム機能を管理
+  const {
+    isErasing,
+    startErasing: hookStartErasing,
+    eraseAtPosition: hookEraseAtPosition,
+    stopErasing: hookStopErasing
+  } = useEraser(pageNum, drawingPaths, setDrawingPaths, eraserSize)
+  const [isGrading, setIsGrading] = useState(false)
+  const [gradingResult, setGradingResult] = useState<GradingResultType | null>(null)
+  const [gradingError, setGradingError] = useState<string | null>(null)
+
+  // useSelection hook を使用して矩形選択機能を管理
+  const {
+    isSelectionMode,
+    setIsSelectionMode,
+    isSelecting,
+    selectionRect,
+    setSelectionRect,
+    selectionPreview,
+    setSelectionPreview,
+    startSelection: hookStartSelection,
+    updateSelection: hookUpdateSelection,
+    finishSelection: hookFinishSelection,
+    cancelSelection
+  } = useSelection()
 
   // SNSリンク
   const [snsLinks, setSnsLinks] = useState<SNSLinkRecord[]>([])
@@ -91,10 +140,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
     loadSNSLinks()
   }, [])
-
-  // 描画パスを保存（ページごと）
-  const [drawingPaths, setDrawingPaths] = useState<Map<number, DrawingPath[]>>(new Map())
-  const currentPathRef = useRef<DrawingPath | null>(null)
 
   // アンドゥ・リドゥ用の履歴（ページごと）
   const [history, setHistory] = useState<Map<number, DrawingPath[][]>>(new Map())
@@ -151,98 +196,38 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showPenPopup, showEraserPopup])
 
-  // PDFを読み込む
+  // 保存されているペン跡を読み込む（PDF読み込み完了後）
   useEffect(() => {
-    const loadPDF = async () => {
-      setIsLoading(true)
-      setError(null)
+    if (!pdfDoc) return
+
+    const loadDrawings = async () => {
       try {
-        let pdfData: ArrayBuffer | string;
-
-        // Base64データから読み込み（シンプル化）
-        if (pdfRecord.fileData) {
-          addStatusMessage('💾 PDFを読み込み中...')
-          pdfData = `data:application/pdf;base64,${pdfRecord.fileData}`
+        const record = await getPDFRecord(pdfId)
+        if (record && Object.keys(record.drawings).length > 0) {
+          const restoredMap = new Map<number, DrawingPath[]>()
+          Object.entries(record.drawings).forEach(([pageNumStr, jsonStr]) => {
+            const pageNum = parseInt(pageNumStr, 10)
+            const paths = JSON.parse(jsonStr) as DrawingPath[]
+            restoredMap.set(pageNum, paths)
+          })
+          setDrawingPaths(restoredMap)
+          addStatusMessage(`✅ ペン跡を復元しました (${restoredMap.size}ページ)`)
         } else {
-          setError(
-            'PDFデータが見つかりません。\n\n' +
-            '以下の手順で再度ファイルを追加してください：\n' +
-            '1. 管理画面に戻る（🏠ボタン）\n' +
-            '2. このPDFを削除\n' +
-            '3. PDFを再度追加'
-          )
-          setIsLoading(false)
-          return
-        }
-
-        console.log('PDFを読み込み中...')
-        const loadingTask = pdfjsLib.getDocument(pdfData)
-        const pdf = await loadingTask.promise
-        setPdfDoc(pdf)
-        setNumPages(pdf.numPages)
-        setIsLoading(false)
-        addStatusMessage(`✅ PDF読み込み成功: ${pdf.numPages}ページ`)
-
-        // 保存されているペン跡を読み込む
-        try {
-          const record = await getPDFRecord(pdfId)
-          if (record && Object.keys(record.drawings).length > 0) {
-            const restoredMap = new Map<number, DrawingPath[]>()
-            Object.entries(record.drawings).forEach(([pageNumStr, jsonStr]) => {
-              const pageNum = parseInt(pageNumStr, 10)
-              const paths = JSON.parse(jsonStr) as DrawingPath[]
-              restoredMap.set(pageNum, paths)
-            })
-            setDrawingPaths(restoredMap)
-            addStatusMessage(`✅ ペン跡を復元しました (${restoredMap.size}ページ)`)
-          } else {
-            addStatusMessage('📄 PDFを読み込みました')
-          }
-        } catch (error) {
-          console.error('ペン跡の復元に失敗:', error)
           addStatusMessage('📄 PDFを読み込みました')
         }
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error)
-        console.error('PDF読み込みエラー:', errorMsg)
-        setError('PDFの読み込みに失敗しました: ' + errorMsg)
-        setIsLoading(false)
+        console.error('ペン跡の復元に失敗:', error)
+        addStatusMessage('📄 PDFを読み込みました')
       }
     }
 
-    loadPDF()
-  }, [pdfRecord, pdfId])
+    loadDrawings()
+  }, [pdfDoc, pdfId])
 
-  // 保存されたパスを再描画する関数（正規化座標から実座標に変換）
-  const redrawPaths = (ctx: CanvasRenderingContext2D, paths: DrawingPath[]) => {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  // 初回ロード時のフラグ（ローカル描画用）
+  const [isInitialDrawLoad, setIsInitialDrawLoad] = useState(true)
 
-    const width = ctx.canvas.width
-    const height = ctx.canvas.height
-
-    paths.forEach(path => {
-      if (path.points.length < 2) return
-
-      ctx.beginPath()
-      ctx.strokeStyle = path.color
-      ctx.lineWidth = path.width
-      ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
-
-      // 正規化座標(0-1)を実座標に変換
-      ctx.moveTo(path.points[0].x * width, path.points[0].y * height)
-      for (let i = 1; i < path.points.length; i++) {
-        ctx.lineTo(path.points[i].x * width, path.points[i].y * height)
-      }
-      ctx.stroke()
-    })
-  }
-
-  // 初回ロード時のフラグ
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const renderTaskRef = useRef<any>(null)
-
-  // ページをレンダリング
+  // ページをレンダリング（描画キャンバス用）
   useEffect(() => {
     if (!pdfDoc || !canvasRef.current || !containerRef.current) return
 
@@ -254,13 +239,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         renderTaskRef.current = null
       }
 
-      console.log(`🔄 レンダリング開始: ページ${pageNum}, スケール=${scale}, 初回=${isInitialLoad}`)
+      console.log(`🔄 レンダリング開始: ページ${pageNum}, スケール=${scale}, 初回=${isInitialDrawLoad}`)
 
       const page = await pdfDoc.getPage(pageNum)
 
       // 初回ロード時は自動的にフィットするスケールを計算
       let renderScale = scale
-      if (isInitialLoad) {
+      if (isInitialDrawLoad) {
         const viewport = page.getViewport({ scale: 1, rotation: 0 })
         const container = containerRef.current!
 
@@ -278,7 +263,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
         renderScale = fitScale
         setScale(fitScale)
-        setIsInitialLoad(false)
+        setIsInitialDrawLoad(false)
       }
 
       const viewport = page.getViewport({ scale: renderScale, rotation: 0 })
@@ -340,7 +325,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         renderTaskRef.current = null
       }
     }
-  }, [pdfDoc, pageNum, scale, isInitialLoad])
+  }, [pdfDoc, pageNum, scale, isInitialDrawLoad])
 
   // ペン跡の再描画（PDFレンダリングとは別に管理）
   useEffect(() => {
@@ -363,20 +348,12 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     if (e.ctrlKey || e.metaKey) return
     if (!isDrawingMode || !drawingCanvasRef.current) return
 
-    setIsCurrentlyDrawing(true)
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
 
-    // 新しいパスを開始（正規化座標で保存: 0-1の範囲）
-    const x = (e.clientX - rect.left) / canvas.width
-    const y = (e.clientY - rect.top) / canvas.height
-
-    currentPathRef.current = {
-      points: [{ x, y }],
-      color: penColor,
-      width: penSize
-    }
-
+    hookStartDrawing(canvas, x, y, penColor, penSize)
     console.log('描画開始')
   }
 
@@ -388,52 +365,24 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       }
       return
     }
-    if (!isCurrentlyDrawing || !isDrawingMode || !drawingCanvasRef.current || !currentPathRef.current) return
+    if (!isCurrentlyDrawing || !isDrawingMode || !drawingCanvasRef.current) return
 
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
 
-    // 正規化座標で保存
-    const x = (e.clientX - rect.left) / canvas.width
-    const y = (e.clientY - rect.top) / canvas.height
-
-    currentPathRef.current.points.push({ x, y })
-
-    // リアルタイムで描画
-    const ctx = canvas.getContext('2d')!
-    const prevPoint = currentPathRef.current.points[currentPathRef.current.points.length - 2]
-
-    ctx.strokeStyle = currentPathRef.current.color
-    ctx.lineWidth = currentPathRef.current.width
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-
-    ctx.beginPath()
-    ctx.moveTo(prevPoint.x * canvas.width, prevPoint.y * canvas.height)
-    ctx.lineTo(x * canvas.width, y * canvas.height)
-    ctx.stroke()
+    hookContinueDrawing(canvas, x, y)
   }
 
   const stopDrawing = () => {
-    if (isCurrentlyDrawing && currentPathRef.current) {
+    if (isCurrentlyDrawing) {
       console.log('描画終了')
 
-      // パスを保存
-      const newPath = currentPathRef.current
-      setDrawingPaths(prev => {
-        const newMap = new Map(prev)
-        const currentPaths = newMap.get(pageNum) || []
-        const newPaths = [...currentPaths, newPath]
-        newMap.set(pageNum, newPaths)
-
-        // 履歴に保存
+      // onSaveコールバックで履歴を保存
+      hookStopDrawing((newPaths) => {
         saveToHistory(newPaths)
-
-        return newMap
       })
-
-      currentPathRef.current = null
-      setIsCurrentlyDrawing(false)
     }
   }
 
@@ -443,50 +392,30 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     if (!isDrawingMode || !drawingCanvasRef.current) return
 
     e.preventDefault()
-    setIsCurrentlyDrawing(true)
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
 
     const touch = e.touches[0]
-    const x = (touch.clientX - rect.left) / canvas.width
-    const y = (touch.clientY - rect.top) / canvas.height
+    const x = touch.clientX - rect.left
+    const y = touch.clientY - rect.top
 
-    currentPathRef.current = {
-      points: [{ x, y }],
-      color: penColor,
-      width: penSize
-    }
-
+    hookStartDrawing(canvas, x, y, penColor, penSize)
     console.log('タッチ描画開始')
   }
 
   const handleDrawingTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length !== 1) return
-    if (!isCurrentlyDrawing || !isDrawingMode || !drawingCanvasRef.current || !currentPathRef.current) return
+    if (!isCurrentlyDrawing || !isDrawingMode || !drawingCanvasRef.current) return
 
     e.preventDefault()
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
 
     const touch = e.touches[0]
-    const x = (touch.clientX - rect.left) / canvas.width
-    const y = (touch.clientY - rect.top) / canvas.height
+    const x = touch.clientX - rect.left
+    const y = touch.clientY - rect.top
 
-    currentPathRef.current.points.push({ x, y })
-
-    // リアルタイムで描画
-    const ctx = canvas.getContext('2d')!
-    const prevPoint = currentPathRef.current.points[currentPathRef.current.points.length - 2]
-
-    ctx.strokeStyle = currentPathRef.current.color
-    ctx.lineWidth = currentPathRef.current.width
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-
-    ctx.beginPath()
-    ctx.moveTo(prevPoint.x * canvas.width, prevPoint.y * canvas.height)
-    ctx.lineTo(x * canvas.width, y * canvas.height)
-    ctx.stroke()
+    hookContinueDrawing(canvas, x, y)
   }
 
   const handleDrawingTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
@@ -495,118 +424,42 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
-  // パン（移動）機能 - Ctrl+ドラッグで移動
-  const startPanning = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Ctrlキーが押されている場合のみパン開始
-    if (!e.ctrlKey && !e.metaKey) return
-
-    e.preventDefault()
-    setIsPanning(true)
-    setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y })
-  }
-
-  const doPanning = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isPanning) return
-
-    setPanOffset({
-      x: e.clientX - panStart.x,
-      y: e.clientY - panStart.y
-    })
-  }
-
-  const stopPanning = () => {
-    setIsPanning(false)
-  }
-
-  // ズーム機能
+  // ズーム機能（フックのresetZoomを呼び出すラッパー）
   const resetZoom = () => {
-    // キャンバスをコンテナいっぱいに広げる
     if (!pdfDoc || !containerRef.current || !canvasRef.current) return
-
-    pdfDoc.getPage(pageNum).then(page => {
-      const viewport = page.getViewport({ scale: 1 })
-      const container = containerRef.current!
-
-      // コンテナのサイズを取得
-      const containerWidth = container.clientWidth
-      const containerHeight = container.clientHeight
-
-      // PDFのアスペクト比を維持しながら、コンテナいっぱいに表示する倍率を計算
-      const scaleX = containerWidth / viewport.width
-      const scaleY = containerHeight / viewport.height
-      const fitScale = Math.min(scaleX, scaleY)
-
-      setScale(fitScale)
-      setPanOffset({ x: 0, y: 0 })
-    })
+    hookResetZoom(pdfDoc, pageNum, canvasRef)
   }
 
-  // Ctrl+ホイールでズーム（PDFエリア内のみ）
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      // containerRef内のイベントかチェック
-      if (containerRef.current && containerRef.current.contains(e.target as Node)) {
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault()
-          e.stopPropagation()
-          const delta = e.deltaY > 0 ? -0.1 : 0.1
-          setScale(prev => Math.max(0.5, Math.min(5, prev + delta)))
-        }
-      }
-    }
-
-    // passive: false で確実にpreventDefaultを有効化
-    document.addEventListener('wheel', handleWheel, { passive: false })
-
-    return () => {
-      document.removeEventListener('wheel', handleWheel)
-    }
-  }, [])
-
-  // Ctrlキーの状態を追跡
-  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
-
+  // Ctrl+Z でアンドゥ機能
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        setIsCtrlPressed(true)
-        // Ctrl+Z でアンドゥ
-        if (e.key === 'z' || e.key === 'Z') {
-          e.preventDefault()
-          const currentPaths = drawingPaths.get(pageNum) || []
-          if (currentPaths.length === 0) {
-            return
-          }
-
-          // 最後のパスを削除
-          setDrawingPaths(prev => {
-            const newMap = new Map(prev)
-            const newPaths = currentPaths.slice(0, -1)
-            if (newPaths.length === 0) {
-              newMap.delete(pageNum)
-            } else {
-              newMap.set(pageNum, newPaths)
-            }
-            return newMap
-          })
-
-          addStatusMessage('↩️ 元に戻しました')
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault()
+        const currentPaths = drawingPaths.get(pageNum) || []
+        if (currentPaths.length === 0) {
+          return
         }
-      }
-    }
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (!e.ctrlKey && !e.metaKey) {
-        setIsCtrlPressed(false)
+        // 最後のパスを削除
+        setDrawingPaths(prev => {
+          const newMap = new Map(prev)
+          const newPaths = currentPaths.slice(0, -1)
+          if (newPaths.length === 0) {
+            newMap.delete(pageNum)
+          } else {
+            newMap.set(pageNum, newPaths)
+          }
+          return newMap
+        })
+
+        addStatusMessage('↩️ 元に戻しました')
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
     }
   }, [pageNum, drawingPaths, addStatusMessage])
 
@@ -788,137 +641,45 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     addStatusMessage('↩️ 元に戻しました')
   }
 
-  // 消しゴムの開始
+  // 消しゴムの開始（フックの関数を使用）
   const startErasing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEraserMode) return
-    setIsErasing(true)
+    hookStartErasing()
     eraseAtPosition(e)
   }
 
-  // 消しゴムを動かす
+  // 消しゴムを動かす（フックの関数を使用）
   const continueErasing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isErasing || !isEraserMode) return
     eraseAtPosition(e)
   }
 
-  // 消しゴムを止める
+  // 消しゴムを止める（フックの関数を使用）
   const stopErasing = () => {
-    if (isErasing) {
-      // 消しゴム終了時に履歴を保存
-      const currentPaths = drawingPaths.get(pageNum) || []
+    hookStopErasing((currentPaths) => {
       saveToHistory(currentPaths)
-    }
-    setIsErasing(false)
+    })
   }
 
-  // 指定位置で消しゴム処理
+  // 指定位置で消しゴム処理（フックの関数を使用）
   const eraseAtPosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEraserMode || !drawingCanvasRef.current) return
 
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
 
-    // 正規化座標で計算（描画時と同じ方法）
-    const x = (e.clientX - rect.left) / canvas.width
-    const y = (e.clientY - rect.top) / canvas.height
-
-    const currentPaths = drawingPaths.get(pageNum) || []
-
-    // クリックした位置に近いパスを探す（ピクセルベースで計算し直す）
-    const eraserRadiusPx = eraserSize // 選択された消しゴムサイズ
-    let targetPathIndex = -1
-    let targetPointIndex = -1
-    let minDistance = Infinity
-
-    for (let i = currentPaths.length - 1; i >= 0; i--) {
-      const path = currentPaths[i]
-      for (let j = 0; j < path.points.length; j++) {
-        const point = path.points[j]
-        // 正規化座標をピクセル座標に変換して距離を計算
-        const pointXPx = point.x * canvas.width
-        const pointYPx = point.y * canvas.height
-        const clickXPx = x * canvas.width
-        const clickYPx = y * canvas.height
-
-        const distance = Math.sqrt(
-          Math.pow(pointXPx - clickXPx, 2) + Math.pow(pointYPx - clickYPx, 2)
-        )
-
-        if (distance < eraserRadiusPx && distance < minDistance) {
-          targetPathIndex = i
-          targetPointIndex = j
-          minDistance = distance
-        }
-      }
-    }
-
-    if (targetPathIndex !== -1 && targetPointIndex !== -1) {
-      const path = currentPaths[targetPathIndex]
-
-      // パスを分裂させる
-      if (path.points.length > 3) {
-        const beforePoints = path.points.slice(0, targetPointIndex)
-        const afterPoints = path.points.slice(targetPointIndex + 1)
-
-        setDrawingPaths(prev => {
-          const newMap = new Map(prev)
-          const newPaths = [...currentPaths]
-
-          // 元のパスを削除
-          newPaths.splice(targetPathIndex, 1)
-
-          // 分裂した2つのパスを追加（2点以上の場合のみ）
-          if (beforePoints.length >= 2) {
-            newPaths.push({
-              points: beforePoints,
-              color: path.color,
-              width: path.width
-            })
-          }
-          if (afterPoints.length >= 2) {
-            newPaths.push({
-              points: afterPoints,
-              color: path.color,
-              width: path.width
-            })
-          }
-
-          if (newPaths.length === 0) {
-            newMap.delete(pageNum)
-          } else {
-            newMap.set(pageNum, newPaths)
-          }
-          return newMap
-        })
-      } else {
-        // パスが短い場合は削除
-        setDrawingPaths(prev => {
-          const newMap = new Map(prev)
-          const newPaths = [...currentPaths]
-          newPaths.splice(targetPathIndex, 1)
-          if (newPaths.length === 0) {
-            newMap.delete(pageNum)
-          } else {
-            newMap.set(pageNum, newPaths)
-          }
-          return newMap
-        })
-      }
-    }
+    hookEraseAtPosition(canvas, x, y)
   }
 
   // クリア機能（現在のページのみ）
   const clearDrawing = () => {
-    // 現在のページの描画パスをクリア
-    setDrawingPaths(prev => {
-      const newMap = new Map(prev)
-      newMap.delete(pageNum)
+    // 履歴に空の状態を保存
+    saveToHistory([])
 
-      // 履歴に空の状態を保存
-      saveToHistory([])
-
-      return newMap
-    })
+    // フックのクリア機能を使用
+    hookClearDrawing()
 
     if (drawingCanvasRef.current) {
       const ctx = drawingCanvasRef.current.getContext('2d')!
@@ -933,7 +694,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       return
     }
 
-    setDrawingPaths(new Map())
+    // フックのクリア機能を使用
+    hookClearAllDrawings()
 
     if (drawingCanvasRef.current) {
       const ctx = drawingCanvasRef.current.getContext('2d')!
@@ -966,11 +728,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     console.log('採点モード: 範囲を選択してください')
   }
 
-  // 矩形選択モードをキャンセル
-  const cancelSelection = () => {
-    setIsSelectionMode(false)
-    setSelectionRect(null)
-    setSelectionPreview(null)
+  // 矩形選択モードをキャンセル（フックの関数を使用し、キャンバスもクリア）
+  const handleCancelSelection = () => {
+    cancelSelection() // フックの関数を呼び出す
     if (selectionCanvasRef.current) {
       const ctx = selectionCanvasRef.current.getContext('2d')!
       ctx.clearRect(0, 0, selectionCanvasRef.current.width, selectionCanvasRef.current.height)
@@ -990,92 +750,35 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     // 選択範囲は保持して、再選択できるようにする
   }
 
-  // 矩形選択の開始
+  // 矩形選択の開始（フックの関数を使用）
   const startSelection = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isSelectionMode || !selectionCanvasRef.current) return
 
-    setIsSelecting(true)
     const canvas = selectionCanvasRef.current
     const rect = canvas.getBoundingClientRect()
-
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    setSelectionRect({
-      startX: x,
-      startY: y,
-      endX: x,
-      endY: y
-    })
-
+    hookStartSelection(canvas, x, y)
     console.log('選択開始:', x, y)
   }
 
-  // 矩形選択の更新
+  // 矩形選択の更新（フックの関数を使用）
   const updateSelection = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isSelecting || !isSelectionMode || !selectionCanvasRef.current || !selectionRect) return
+    if (!isSelecting || !isSelectionMode || !selectionCanvasRef.current) return
 
     const canvas = selectionCanvasRef.current
     const rect = canvas.getBoundingClientRect()
-
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    setSelectionRect({
-      ...selectionRect,
-      endX: x,
-      endY: y
-    })
-
-    // 選択範囲を描画
-    const ctx = canvas.getContext('2d')!
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-    const width = x - selectionRect.startX
-    const height = y - selectionRect.startY
-
-    // 選択範囲の枠を描画
-    ctx.strokeStyle = '#2196F3'
-    ctx.lineWidth = 2
-    ctx.setLineDash([5, 5])
-    ctx.strokeRect(selectionRect.startX, selectionRect.startY, width, height)
-
-    // 選択範囲の背景を半透明にする
-    ctx.fillStyle = 'rgba(33, 150, 243, 0.1)'
-    ctx.fillRect(selectionRect.startX, selectionRect.startY, width, height)
+    hookUpdateSelection(canvas, x, y)
   }
 
-  // 矩形選択の終了（確認ポップアップを表示）
+  // 矩形選択の終了（フックの関数を使用）
   const finishSelection = () => {
-    if (isSelecting && selectionRect && canvasRef.current && drawingCanvasRef.current) {
-      setIsSelecting(false)
-      console.log('選択完了:', selectionRect)
-
-      // 選択範囲が十分な大きさの場合、プレビューを生成
-      const { startX, startY, endX, endY } = selectionRect
-      const x = Math.min(startX, endX)
-      const y = Math.min(startY, endY)
-      const width = Math.abs(endX - startX)
-      const height = Math.abs(endY - startY)
-
-      if (width >= 50 && height >= 50) {
-        // 選択範囲を切り出してプレビュー画像を作成
-        const tempCanvas = document.createElement('canvas')
-        tempCanvas.width = width
-        tempCanvas.height = height
-        const ctx = tempCanvas.getContext('2d')!
-
-        // PDFを描画
-        ctx.drawImage(canvasRef.current, x, y, width, height, 0, 0, width, height)
-
-        // 手書きを重ねる
-        ctx.drawImage(drawingCanvasRef.current, x, y, width, height, 0, 0, width, height)
-
-        // Base64画像として保存
-        const previewData = tempCanvas.toDataURL('image/jpeg', 0.85)
-        setSelectionPreview(previewData)
-      }
-    }
+    if (!canvasRef.current || !drawingCanvasRef.current) return
+    hookFinishSelection(canvasRef.current, drawingCanvasRef.current)
   }
 
   // 採点機能
@@ -1232,8 +935,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
-  // ページ移動
-  const goToPrevPage = () => {
+  // ページ移動（履歴クリア機能付き）
+  const handleGoToPrevPage = () => {
     if (pageNum > 1) {
       // ページ移動時に現在のページの履歴をクリア
       setHistory(prev => {
@@ -1246,11 +949,11 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         newIndex.delete(pageNum)
         return newIndex
       })
-      setPageNum(pageNum - 1)
+      goToPrevPage() // フックの関数を使用
     }
   }
 
-  const goToNextPage = () => {
+  const handleGoToNextPage = () => {
     if (pageNum < numPages) {
       // ページ移動時に現在のページの履歴をクリア
       setHistory(prev => {
@@ -1263,7 +966,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         newIndex.delete(pageNum)
         return newIndex
       })
-      setPageNum(pageNum + 1)
+      goToNextPage() // フックの関数を使用
     }
   }
 
@@ -1281,13 +984,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         )}
 
         {/* ページ操作 */}
-        <button onClick={goToPrevPage} disabled={pageNum <= 1} title="前のページ">
+        <button onClick={handleGoToPrevPage} disabled={pageNum <= 1} title="前のページ">
           ⬅️
         </button>
         <span className="page-info">
           {pageNum} / {numPages}
         </span>
-        <button onClick={goToNextPage} disabled={pageNum >= numPages} title="次のページ">
+        <button onClick={handleGoToNextPage} disabled={pageNum >= numPages} title="次のページ">
           ➡️
         </button>
 
@@ -1377,7 +1080,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
         {/* 採点ボタン */}
         <button
-          onClick={isSelectionMode ? cancelSelection : startGrading}
+          onClick={isSelectionMode ? handleCancelSelection : startGrading}
           className={isSelectionMode ? 'active' : ''}
           disabled={isGrading}
           title={isSelectionMode ? 'キャンセル' : '範囲を選択して採点'}
