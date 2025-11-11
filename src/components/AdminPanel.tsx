@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getAllPDFRecords, deletePDFRecord, savePDFRecord, generatePDFId, PDFFileRecord, getAllSNSLinks, deleteSNSLink, saveSNSLink, SNSLinkRecord } from '../utils/indexedDB';
-import { requestPersistentStorage, getStorageEstimate, getPlatformInfo, getStorageAdviceMessage } from '../utils/storageManager';
+import { PDFFileRecord } from '../utils/indexedDB';
+import { getPlatformInfo } from '../utils/storageManager';
 import GradingHistory from './grading/GradingHistory';
+import { usePDFRecords } from '../hooks/admin/usePDFRecords';
+import { useSNSLinks } from '../hooks/admin/useSNSLinks';
+import { useStorage } from '../hooks/admin/useStorage';
 import './AdminPanel.css';
 import { PREDEFINED_SNS, getSNSIcon } from '../constants/sns';
 
@@ -10,41 +13,51 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
-  const [pdfRecords, setPdfRecords] = useState<PDFFileRecord[]>([]);
-  const [snsLinks, setSnsLinks] = useState<SNSLinkRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  // Custom hooks
+  const {
+    pdfRecords,
+    loading,
+    uploading,
+    errorMessage: pdfError,
+    setErrorMessage: setPdfError,
+    loadPDFRecords,
+    handleFileSelect,
+    handleDeleteRecord
+  } = usePDFRecords();
+
+  const {
+    snsLinks,
+    selectedSNS,
+    customUrls,
+    loadSNSLinks,
+    toggleSNS,
+    updateCustomUrl,
+    saveSNSSettings: saveSNSSettingsHook
+  } = useSNSLinks();
+
+  const {
+    storageInfo,
+    initializeStorage
+  } = useStorage();
+
+  // Local UI state
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; fileName: string } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showSNSSettings, setShowSNSSettings] = useState(false);
   const [showGradingHistory, setShowGradingHistory] = useState(false);
-  const [selectedSNS, setSelectedSNS] = useState<Set<string>>(new Set());
-  const [customUrls, setCustomUrls] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [storageInfo, setStorageInfo] = useState<{
-    isPersisted: boolean;
-    usageMB: number;
-    quotaMB: number;
-    usagePercent: number;
-  } | null>(null);
   const [showStorageInfo, setShowStorageInfo] = useState(false);
 
-  // PDFレコードとSNSリンクを読み込む
+  // Load data on mount
   useEffect(() => {
     loadPDFRecords();
     loadSNSLinks();
     initializeStorage();
   }, []);
 
-  // ストレージをクリアする
+  // ストレージをクリアする（確認なし、自動更新）
   const clearAllStorage = async () => {
     try {
-      // まず状態をクリア
-      setPdfRecords([]);
-      setSnsLinks([]);
-      setSelectedSNS(new Set());
-      setCustomUrls({});
-
       // IndexedDBを削除
       await new Promise<void>((resolve, reject) => {
         const request = indexedDB.deleteDatabase('HomeTeacherDB');
@@ -64,316 +77,26 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
     }
   };
 
-  // ストレージの初期化と永続化リクエスト
-  const initializeStorage = async () => {
-    try {
-      // 永続化をリクエスト
-      const isPersisted = await requestPersistentStorage();
-
-      // ストレージ情報を取得
-      const estimate = await getStorageEstimate();
-
-      if (estimate) {
-        setStorageInfo({
-          isPersisted,
-          usageMB: estimate.usageMB,
-          quotaMB: estimate.quotaMB,
-          usagePercent: estimate.usagePercent,
-        });
-      }
-
-      // プラットフォーム情報を取得してアドバイスを表示
-      const platformInfo = getPlatformInfo();
-      const advice = getStorageAdviceMessage(isPersisted, platformInfo);
-
-      // 重要な警告の場合は自動表示
-      if (advice.severity === 'warning' && !isPersisted) {
-        console.warn(advice.title, advice.message);
-      }
-    } catch (error) {
-      console.error('Failed to initialize storage:', error);
-    }
-  };
-
-  const loadPDFRecords = async () => {
-    try {
-      setLoading(true);
-      const records = await getAllPDFRecords();
-      setPdfRecords(records);
-    } catch (error) {
-      console.error('Failed to load PDFs:', error);
-      setErrorMessage('Failed to load PDF list');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadSNSLinks = async () => {
-    try {
-      const links = await getAllSNSLinks();
-      setSnsLinks(links);
-
-      // 既存のSNSリンクから選択状態を復元
-      const selected = new Set<string>();
-      const urls: Record<string, string> = {};
-
-      links.forEach(link => {
-        // 既存のリンクから対応するSNSを探す
-        const predefined = PREDEFINED_SNS.find(sns =>
-          sns.name.toLowerCase() === link.name.toLowerCase() ||
-          sns.id === link.id
-        );
-
-        if (predefined) {
-          selected.add(predefined.id);
-          if (link.url !== predefined.defaultUrl) {
-            urls[predefined.id] = link.url;
-          }
-        }
-      });
-
-      setSelectedSNS(selected);
-      setCustomUrls(urls);
-    } catch (error) {
-      console.error('Failed to load SNS links:', error);
-    }
-  };
-
-  // サムネイルを生成する関数
-  const generateThumbnail = async (file: File): Promise<string> => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // PDF.jsを動的にインポート
-        const pdfjsLib = await import('pdfjs-dist');
-
-        // Workerの設定
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-
-        // ファイルをArrayBufferとして読み込み
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-
-        // 先頭ページを取得
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 0.5 }); // サムネイル用に小さく
-
-        // キャンバスを作成
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!context) {
-          reject(new Error('Canvas context not available'));
-          return;
-        }
-
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        // レンダリング
-        await page.render({
-          canvasContext: context,
-          viewport: viewport,
-        }).promise;
-
-        // Base64に変換
-        const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
-        resolve(thumbnail);
-      } catch (error) {
-        console.error('Failed to generate thumbnail:', error);
-        reject(error);
-      }
-    });
-  };
-
-  // ファイル選択（シンプルなBase64保存のみ）
-  const handleFileSelect = async () => {
-    setUploading(true);
-    try {
-      // File System Access APIを優先的に使用（より良いUX）
-      let file: File | null = null;
-
-      if ('showOpenFilePicker' in window) {
-        try {
-          const [fileHandle] = await (window as any).showOpenFilePicker({
-            types: [
-              {
-                description: 'PDF Files',
-                accept: {
-                  'application/pdf': ['.pdf'],
-                },
-              },
-            ],
-            multiple: false,
-          });
-          file = await fileHandle.getFile();
-        } catch (error) {
-          // ユーザーがキャンセルした場合など
-          if (error instanceof Error && error.name !== 'AbortError') {
-            console.error('File picker failed:', error);
-          }
-          setUploading(false);
-          return;
-        }
-      } else {
-        // フォールバック：従来の<input type="file">を使用
-        file = await new Promise<File | null>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'application/pdf';
-          input.onchange = (e) => {
-            const selectedFile = (e.target as HTMLInputElement).files?.[0];
-            resolve(selectedFile || null);
-          };
-          input.click();
-        });
-
-        if (!file) {
-          setUploading(false);
-          return;
-        }
-      }
-
-      // ファイルサイズチェック（100MBまで）
-      if (file.size > 100 * 1024 * 1024) {
-        setErrorMessage('ファイルサイズが大きすぎます（最大100MB）');
-        setUploading(false);
-        return;
-      }
-
-      const fileName = file.name;
-      const id = generatePDFId(fileName);
-
-      // サムネイルを生成
-      const thumbnail = await generateThumbnail(file);
-
-      // ファイル全体をBase64として保存
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      let binaryString = '';
-      const chunkSize = 0x8000;
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-        binaryString += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      const base64Data = btoa(binaryString);
-
-      // 新しいレコードを作成（Base64データのみ保存）
-      const newRecord: PDFFileRecord = {
-        id,
-        fileName,
-        fileData: base64Data, // Base64データを保存
-        thumbnail,
-        lastOpened: Date.now(),
-        drawings: {},
-      };
-
-      await savePDFRecord(newRecord);
-      await loadPDFRecords();
-
-      // 自動的に開く
-      onSelectPDF(newRecord);
-    } catch (error) {
-      console.error('Failed to add PDF:', error);
-      setErrorMessage(`Failed to add PDF: ${error}`);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // レコード削除（確認ダイアログを表示）
-  const handleDeleteClick = (id: string, fileName: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // 親要素のクリックイベントを防ぐ
-    setDeleteConfirm({ id, fileName });
-  };
-
   // 削除を確定
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
-
-    try {
-      await deletePDFRecord(deleteConfirm.id);
-      await loadPDFRecords();
-      setDeleteConfirm(null);
-    } catch (error) {
-      console.error('Failed to delete:', error);
-      setErrorMessage('Failed to delete');
-      setDeleteConfirm(null);
-    }
-  };
-
-  // 削除をキャンセル
-  const cancelDelete = () => {
+    await handleDeleteRecord(deleteConfirm.id);
     setDeleteConfirm(null);
-  };
-
-  // レコード選択
-  const handleSelectRecord = (record: PDFFileRecord) => {
-    try {
-      onSelectPDF(record);
-    } catch (error) {
-      console.error('Failed to open PDF:', error);
-      setErrorMessage(`Failed to open PDF: ${error}`);
-    }
-  };
-
-  // SNS選択状態をトグル
-  const toggleSNS = (snsId: string) => {
-    setSelectedSNS(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(snsId)) {
-        newSet.delete(snsId);
-        // カスタムURLも削除
-        setCustomUrls(urls => {
-          const newUrls = { ...urls };
-          delete newUrls[snsId];
-          return newUrls;
-        });
-      } else {
-        newSet.add(snsId);
-      }
-      return newSet;
-    });
-  };
-
-  // カスタムURL変更
-  const updateCustomUrl = (snsId: string, url: string) => {
-    setCustomUrls(prev => ({
-      ...prev,
-      [snsId]: url
-    }));
   };
 
   // SNS設定を保存
   const saveSNSSettings = async () => {
     try {
-      // 既存のすべてのSNSリンクを削除
-      for (const link of snsLinks) {
-        await deleteSNSLink(link.id);
-      }
-
-      // 選択されたSNSを保存
-      for (const snsId of selectedSNS) {
-        const sns = PREDEFINED_SNS.find(s => s.id === snsId);
-        if (sns) {
-          const url = customUrls[snsId] || sns.defaultUrl;
-          const newLink: SNSLinkRecord = {
-            id: snsId,
-            name: sns.name,
-            url: url,
-            icon: sns.icon,
-            createdAt: Date.now()
-          };
-          await saveSNSLink(newLink);
-        }
-      }
-
-      await loadSNSLinks();
+      await saveSNSSettingsHook();
       setShowSNSSettings(false);
     } catch (error) {
       console.error('Failed to save SNS settings:', error);
       setErrorMessage('Failed to save SNS settings');
     }
   };
+
+  // Merge error messages
+  const currentError = errorMessage || pdfError;
 
   if (loading) {
     return (
@@ -439,7 +162,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
-                onClick={cancelDelete}
+                onClick={() => setDeleteConfirm(null)}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#95a5a6',
@@ -806,7 +529,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
         </div>
       )}
 
-      {errorMessage && (
+      {currentError && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -830,11 +553,14 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               Error
             </h3>
             <p style={{ margin: '0 0 24px 0', color: '#7f8c8d', fontSize: '14px' }}>
-              {errorMessage}
+              {currentError}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setErrorMessage(null)}
+                onClick={() => {
+                  setErrorMessage(null);
+                  setPdfError(null);
+                }}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#3498db',
@@ -894,7 +620,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                 <div
                   key={record.id}
                   className="pdf-list-item"
-                  onClick={() => handleSelectRecord(record)}
+                  onClick={() => onSelectPDF(record)}
                 >
                   <div className="icon-container">
                     {record.thumbnail ? (
@@ -929,7 +655,10 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   <div className="file-name">{record.fileName}</div>
                   <button
                     className="delete-button"
-                    onClick={(e) => handleDeleteClick(record.id, record.fileName, e)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteConfirm({ id: record.id, fileName: record.fileName });
+                    }}
                     title="削除"
                   >
                     <svg
@@ -951,7 +680,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
             </div>
           )}
 
-          <button className="add-button" onClick={handleFileSelect}>
+          <button className="add-button" onClick={() => handleFileSelect(onSelectPDF)}>
             <span className="add-button-icon">+</span>
             <span>Add PDF</span>
           </button>
