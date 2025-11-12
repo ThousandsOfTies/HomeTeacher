@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { PDFFileRecord } from '../utils/indexedDB';
-import { getPlatformInfo } from '../utils/storageManager';
-import GradingHistory from './grading/GradingHistory';
-import { usePDFRecords } from '../hooks/admin/usePDFRecords';
-import { useSNSLinks } from '../hooks/admin/useSNSLinks';
-import { useStorage } from '../hooks/admin/useStorage';
+import { PDFFileRecord } from '../../utils/indexedDB';
+import { getPlatformInfo } from '../../utils/storageManager';
+import GradingHistory from '../grading/GradingHistory';
+import { usePDFRecords } from '../../hooks/admin/usePDFRecords';
+import { useSNSLinks } from '../../hooks/admin/useSNSLinks';
+import { useStorage } from '../../hooks/admin/useStorage';
 import './AdminPanel.css';
-import { PREDEFINED_SNS, getSNSIcon } from '../constants/sns';
+import { PREDEFINED_SNS, getSNSIcon } from '../../constants/sns';
 
 interface AdminPanelProps {
   onSelectPDF: (record: PDFFileRecord) => void;
