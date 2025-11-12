@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hometeacher-api-673574334179.asia-northeast1.run.app/api'
 
 export interface Problem {
   problemNumber: string
