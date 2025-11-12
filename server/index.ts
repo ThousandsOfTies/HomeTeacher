@@ -40,9 +40,9 @@ app.post('/api/grade', async (req, res) => {
     const mimeType = `image/${base64Match[1]}`
     const base64Data = base64Match[2]
 
-    // Gemini 2.5 Flash モデルを使用（安定版）
-    // 他のオプション: 'gemini-1.5-flash', 'gemini-2.0-flash-exp'
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    // Gemini 1.5 Flash モデルを使用（安定版）
+    // 他のオプション: 'gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-2.5-flash'
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash'
     console.log(`使用モデル: ${modelName}`)
     const model = genAI.getGenerativeModel({ model: modelName })
 
