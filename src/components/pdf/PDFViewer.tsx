@@ -389,7 +389,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   // タッチでの描画機能（1本指）
   const handleDrawingTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length !== 1) return // 1本指のみ
-    if (!isDrawingMode || !drawingCanvasRef.current) return
+    if (!drawingCanvasRef.current) return
+    if (!isDrawingMode && !isEraserMode) return
 
     e.preventDefault()
     const canvas = drawingCanvasRef.current
@@ -399,13 +400,19 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     const x = touch.clientX - rect.left
     const y = touch.clientY - rect.top
 
-    hookStartDrawing(canvas, x, y, penColor, penSize)
-    console.log('タッチ描画開始')
+    if (isEraserMode) {
+      hookStartErasing()
+      hookEraseAtPosition(canvas, x, y)
+      addStatusMessage(`✏️ 消しゴム開始: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
+    } else if (isDrawingMode) {
+      hookStartDrawing(canvas, x, y, penColor, penSize)
+      addStatusMessage('✏️ タッチ描画開始')
+    }
   }
 
   const handleDrawingTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length !== 1) return
-    if (!isCurrentlyDrawing || !isDrawingMode || !drawingCanvasRef.current) return
+    if (!drawingCanvasRef.current) return
 
     e.preventDefault()
     const canvas = drawingCanvasRef.current
@@ -415,12 +422,24 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     const x = touch.clientX - rect.left
     const y = touch.clientY - rect.top
 
-    hookContinueDrawing(canvas, x, y)
+    if (isEraserMode && isErasing) {
+      hookEraseAtPosition(canvas, x, y)
+      addStatusMessage(`✏️ 消しゴム移動: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
+    } else if (isDrawingMode && isCurrentlyDrawing) {
+      hookContinueDrawing(canvas, x, y)
+    }
   }
 
   const handleDrawingTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length === 0) {
-      stopDrawing()
+      if (isEraserMode && isErasing) {
+        hookStopErasing((newPaths) => {
+          saveToHistory(newPaths)
+        })
+        addStatusMessage('✏️ 消しゴム終了')
+      } else if (isDrawingMode && isCurrentlyDrawing) {
+        stopDrawing()
+      }
     }
   }
 
