@@ -719,14 +719,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   // 採点開始（範囲選択モードに切り替え）
   const startGrading = () => {
-    console.log('📱 採点モード開始')
+    addStatusMessage('📱 採点モード開始')
     setIsSelectionMode(true)
     setIsDrawingMode(false) // 描画モードをオフ
     setIsEraserMode(false) // 消しゴムモードをオフ
     setShowPenPopup(false) // ポップアップを閉じる
     setShowEraserPopup(false) // ポップアップを閉じる
     setSelectionRect(null) // 選択をクリア
-    console.log('採点モード: 範囲を選択してください')
+    addStatusMessage('採点モード: 範囲を選択してください')
     addStatusMessage('📐 採点範囲を選択してください')
   }
 
@@ -737,7 +737,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       const ctx = selectionCanvasRef.current.getContext('2d')!
       ctx.clearRect(0, 0, selectionCanvasRef.current.width, selectionCanvasRef.current.height)
     }
-    console.log('採点モードをキャンセル')
+    addStatusMessage('採点モードをキャンセル')
   }
 
   // 確認ポップアップから採点を実行
@@ -1204,7 +1204,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               const rect = selectionCanvasRef.current!.getBoundingClientRect()
               const x = touch.clientX - rect.left
               const y = touch.clientY - rect.top
-              console.log('📱 選択タッチ開始:', { x, y, isSelectionMode })
+              addStatusMessage(`📱 選択タッチ開始: x=${x.toFixed(0)}, y=${y.toFixed(0)}, mode=${isSelectionMode}`)
               startSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
             }}
             onTouchMove={(e) => {
@@ -1214,13 +1214,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               const rect = selectionCanvasRef.current!.getBoundingClientRect()
               const x = touch.clientX - rect.left
               const y = touch.clientY - rect.top
-              console.log('📱 選択タッチ移動:', { x, y })
+              addStatusMessage(`📱 選択タッチ移動: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
               updateSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
             }}
             onTouchEnd={(e) => {
               if (!isSelectionMode) return
               e.preventDefault()
-              console.log('📱 選択タッチ終了')
+              addStatusMessage('📱 選択タッチ終了')
               finishSelection()
             }}
           />
