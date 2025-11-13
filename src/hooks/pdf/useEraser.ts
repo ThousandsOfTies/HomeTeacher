@@ -8,26 +8,30 @@ export const useEraser = (
   eraserSize: number
 ) => {
   const [isErasing, setIsErasing] = useState(false)
+  const [lastErasePos, setLastErasePos] = useState<{ x: number; y: number } | null>(null)
 
   const startErasing = () => {
     setIsErasing(true)
+    setLastErasePos(null)
   }
 
   const eraseAtPosition = (canvas: HTMLCanvasElement, x: number, y: number) => {
-    // 正規化座標で計算
-    const normalizedX = x / canvas.width
-    const normalizedY = y / canvas.height
+    // 前回と同じ位置なら処理をスキップ（パフォーマンス向上）
+    if (lastErasePos && Math.abs(lastErasePos.x - x) < 2 && Math.abs(lastErasePos.y - y) < 2) {
+      return
+    }
+    setLastErasePos({ x, y })
 
     const currentPaths = drawingPaths.get(pageNum) || []
 
-    // クリックした位置に近いパスを探す
+    // 消しゴムの位置に近いパスを全て探す
     const eraserRadiusPx = eraserSize
-    let targetPathIndex = -1
-    let targetPointIndex = -1
-    let minDistance = Infinity
+    const pathsToModify: Array<{ pathIndex: number; pointIndices: number[] }> = []
 
-    for (let i = currentPaths.length - 1; i >= 0; i--) {
+    for (let i = 0; i < currentPaths.length; i++) {
       const path = currentPaths[i]
+      const pointIndices: number[] = []
+
       for (let j = 0; j < path.points.length; j++) {
         const point = path.points[j]
         // 正規化座標をピクセル座標に変換して距離を計算
@@ -38,66 +42,88 @@ export const useEraser = (
           Math.pow(pointXPx - x, 2) + Math.pow(pointYPx - y, 2)
         )
 
-        if (distance < eraserRadiusPx && distance < minDistance) {
-          targetPathIndex = i
-          targetPointIndex = j
-          minDistance = distance
+        if (distance < eraserRadiusPx) {
+          pointIndices.push(j)
         }
+      }
+
+      if (pointIndices.length > 0) {
+        pathsToModify.push({ pathIndex: i, pointIndices })
       }
     }
 
-    if (targetPathIndex !== -1 && targetPointIndex !== -1) {
-      const path = currentPaths[targetPathIndex]
+    if (pathsToModify.length > 0) {
+      setDrawingPaths(prev => {
+        const newMap = new Map(prev)
+        let newPaths = [...currentPaths]
 
-      // パスを分裂させる
-      if (path.points.length > 3) {
-        const beforePoints = path.points.slice(0, targetPointIndex)
-        const afterPoints = path.points.slice(targetPointIndex + 1)
+        // 後ろから処理してインデックスのずれを防ぐ
+        for (let i = pathsToModify.length - 1; i >= 0; i--) {
+          const { pathIndex, pointIndices } = pathsToModify[i]
+          const path = newPaths[pathIndex]
 
-        setDrawingPaths(prev => {
-          const newMap = new Map(prev)
-          const newPaths = [...currentPaths]
+          if (!path) continue
 
-          // 元のパスを削除
-          newPaths.splice(targetPathIndex, 1)
+          // 連続する削除ポイントの範囲を特定
+          const ranges: Array<[number, number]> = []
+          let rangeStart = pointIndices[0]
+          let rangeEnd = pointIndices[0]
 
-          // 分裂した2つのパスを追加（2点以上の場合のみ）
-          if (beforePoints.length >= 2) {
-            newPaths.push({
-              points: beforePoints,
-              color: path.color,
-              width: path.width
-            })
+          for (let j = 1; j < pointIndices.length; j++) {
+            if (pointIndices[j] === rangeEnd + 1) {
+              rangeEnd = pointIndices[j]
+            } else {
+              ranges.push([rangeStart, rangeEnd])
+              rangeStart = pointIndices[j]
+              rangeEnd = pointIndices[j]
+            }
           }
-          if (afterPoints.length >= 2) {
-            newPaths.push({
-              points: afterPoints,
-              color: path.color,
-              width: path.width
-            })
+          ranges.push([rangeStart, rangeEnd])
+
+          // パスを分割
+          const segments: DrawingPath[] = []
+          let lastEnd = 0
+
+          for (const [start, end] of ranges) {
+            if (start > lastEnd) {
+              const segmentPoints = path.points.slice(lastEnd, start)
+              if (segmentPoints.length >= 2) {
+                segments.push({
+                  points: segmentPoints,
+                  color: path.color,
+                  width: path.width
+                })
+              }
+            }
+            lastEnd = end + 1
           }
 
-          if (newPaths.length === 0) {
-            newMap.delete(pageNum)
-          } else {
-            newMap.set(pageNum, newPaths)
+          // 最後のセグメント
+          if (lastEnd < path.points.length) {
+            const segmentPoints = path.points.slice(lastEnd)
+            if (segmentPoints.length >= 2) {
+              segments.push({
+                points: segmentPoints,
+                color: path.color,
+                width: path.width
+              })
+            }
           }
-          return newMap
-        })
-      } else {
-        // パスが短い場合は削除
-        setDrawingPaths(prev => {
-          const newMap = new Map(prev)
-          const newPaths = [...currentPaths]
-          newPaths.splice(targetPathIndex, 1)
-          if (newPaths.length === 0) {
-            newMap.delete(pageNum)
-          } else {
-            newMap.set(pageNum, newPaths)
-          }
-          return newMap
-        })
-      }
+
+          // 元のパスを削除して分割されたセグメントを追加
+          newPaths.splice(pathIndex, 1, ...segments)
+        }
+
+        // 空のパスを削除
+        newPaths = newPaths.filter(p => p.points.length >= 2)
+
+        if (newPaths.length === 0) {
+          newMap.delete(pageNum)
+        } else {
+          newMap.set(pageNum, newPaths)
+        }
+        return newMap
+      })
     }
   }
 
@@ -110,6 +136,7 @@ export const useEraser = (
       }
     }
     setIsErasing(false)
+    setLastErasePos(null)
   }
 
   return {

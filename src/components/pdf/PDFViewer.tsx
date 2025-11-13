@@ -1195,6 +1195,26 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             onMouseMove={updateSelection}
             onMouseUp={finishSelection}
             onMouseLeave={finishSelection}
+            onTouchStart={(e) => {
+              e.preventDefault()
+              const touch = e.touches[0]
+              const rect = selectionCanvasRef.current!.getBoundingClientRect()
+              const x = (touch.clientX - rect.left) * (selectionCanvasRef.current!.width / rect.width)
+              const y = (touch.clientY - rect.top) * (selectionCanvasRef.current!.height / rect.height)
+              startSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
+            }}
+            onTouchMove={(e) => {
+              e.preventDefault()
+              const touch = e.touches[0]
+              const rect = selectionCanvasRef.current!.getBoundingClientRect()
+              const x = (touch.clientX - rect.left) * (selectionCanvasRef.current!.width / rect.width)
+              const y = (touch.clientY - rect.top) * (selectionCanvasRef.current!.height / rect.height)
+              updateSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault()
+              finishSelection({ nativeEvent: {} } as any)
+            }}
           />
         </div>
       </div>

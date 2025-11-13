@@ -4,7 +4,7 @@
 # 使用方法: ./deploy-cloud-run.sh
 
 # 設定
-PROJECT_ID="your-gcp-project-id"  # ← GCPプロジェクトIDに置き換えてください
+PROJECT_ID="hometeacher-478013"  # ← GCPプロジェクトIDに置き換えてください
 SERVICE_NAME="hometeacher-api"
 REGION="asia-northeast1"  # 東京リージョン
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
