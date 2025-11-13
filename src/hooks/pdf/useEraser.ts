@@ -17,12 +17,14 @@ export const useEraser = (
 
   const eraseAtPosition = (canvas: HTMLCanvasElement, x: number, y: number) => {
     // 前回と同じ位置なら処理をスキップ（パフォーマンス向上）
-    if (lastErasePos && Math.abs(lastErasePos.x - x) < 2 && Math.abs(lastErasePos.y - y) < 2) {
+    // 閾値を1ピクセルに変更（より細かく消せるように）
+    if (lastErasePos && Math.abs(lastErasePos.x - x) < 1 && Math.abs(lastErasePos.y - y) < 1) {
       return
     }
     setLastErasePos({ x, y })
 
     const currentPaths = drawingPaths.get(pageNum) || []
+    console.log(`🧹 消しゴム実行: 位置(${x.toFixed(0)}, ${y.toFixed(0)}), パス数: ${currentPaths.length}, 消しゴムサイズ: ${eraserSize}px`)
 
     // 消しゴムの位置に近いパスを全て探す
     const eraserRadiusPx = eraserSize
@@ -53,6 +55,7 @@ export const useEraser = (
     }
 
     if (pathsToModify.length > 0) {
+      console.log(`🧹 削除対象: ${pathsToModify.length}個のパス, 合計${pathsToModify.reduce((sum, p) => sum + p.pointIndices.length, 0)}個のポイント`)
       setDrawingPaths(prev => {
         const newMap = new Map(prev)
         let newPaths = [...currentPaths]
@@ -124,6 +127,8 @@ export const useEraser = (
         }
         return newMap
       })
+    } else {
+      console.log(`🧹 削除対象なし: 消しゴムの範囲内にパスが見つかりませんでした`)
     }
   }
 
