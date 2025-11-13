@@ -31,7 +31,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const addStatusMessage = (message: string) => {
     const timestamp = new Date().toLocaleTimeString('ja-JP')
     const fullMessage = `[${timestamp}] ${message}`
-    setStatusMessages(prev => [...prev, fullMessage].slice(-20)) // 最新20件のみ保持
+    setStatusMessages(prev => [...prev, fullMessage].slice(-50)) // 最新50件のみ保持
     console.log(fullMessage)
   }
 
@@ -1018,7 +1018,20 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }
 
   return (
-    <div className="pdf-viewer">
+    <div className="pdf-viewer-container">
+      {/* ログパネル */}
+      <div className="log-panel">
+        <div className="log-header">デバッグログ</div>
+        <div className="log-content">
+          {statusMessages.map((msg, idx) => (
+            <div key={idx} className="log-item">
+              {msg}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pdf-viewer">
       <div className="toolbar">
         {/* 戻るボタン */}
         {onBack && (
@@ -1347,6 +1360,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           🔧
         </button>
       </div>
+    </div>
     </div>
   )
 }
