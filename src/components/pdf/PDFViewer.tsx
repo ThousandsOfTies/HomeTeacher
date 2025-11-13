@@ -522,53 +522,51 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       const currentDistance = getTouchDistance(e.touches[0], e.touches[1])
       const currentCenter = getTouchCenter(e.touches[0], e.touches[1])
 
-      // ピンチイン・アウトでズーム（指の中心を維持）
+      // ピンチイン・アウトでズーム（現在の指の中心を維持）
       const distanceChange = currentDistance - lastTouchDistance
-      const dx = currentCenter.x - lastTouchCenter.x
-      const dy = currentCenter.y - lastTouchCenter.y
+      const centerDx = currentCenter.x - lastTouchCenter.x
+      const centerDy = currentCenter.y - lastTouchCenter.y
 
-      if (Math.abs(distanceChange) > 5 || Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      // ズーム処理
+      if (Math.abs(distanceChange) > 5) {
         const scaleChange = distanceChange * 0.005
         const oldScale = scale
         const newScale = Math.max(0.5, Math.min(5, oldScale + scaleChange))
 
-        let zoomOffsetX = 0
-        let zoomOffsetY = 0
-
-        // ズーム中心を指の中心にするため、パンオフセットを調整
+        // ズーム中心を現在の指の中心にするため、パンオフセットを調整
         if (containerRef.current) {
           const containerRect = containerRef.current.getBoundingClientRect()
           const containerCenterX = containerRect.width / 2
           const containerCenterY = containerRect.height / 2
 
-          // 初期の指の中心位置（lastTouchCenter）のコンテナ中心からの相対位置
-          const relativeCenterX = lastTouchCenter.x - containerRect.left - containerCenterX
-          const relativeCenterY = lastTouchCenter.y - containerRect.top - containerCenterY
+          // 現在の指の中心のコンテナ中心からの相対位置
+          const relativeCenterX = currentCenter.x - containerRect.left - containerCenterX
+          const relativeCenterY = currentCenter.y - containerRect.top - containerCenterY
 
           // スケール変化に伴うオフセット調整
           const scaleDelta = newScale / oldScale - 1
-          zoomOffsetX = -relativeCenterX * scaleDelta
-          zoomOffsetY = -relativeCenterY * scaleDelta
+          const zoomOffsetX = -relativeCenterX * scaleDelta
+          const zoomOffsetY = -relativeCenterY * scaleDelta
 
-          // ズームオフセット + パン移動を同時に適用
           setPanOffset(prev => ({
-            x: prev.x + zoomOffsetX + dx,
-            y: prev.y + zoomOffsetY + dy
+            x: prev.x + zoomOffsetX,
+            y: prev.y + zoomOffsetY
           }))
-        } else {
-          // containerRefがない場合は単純なパンのみ
-          setPanOffset(prev => ({
-            x: prev.x + dx,
-            y: prev.y + dy
-          }))
+
+          addStatusMessage(`🔍 ズーム: scale=${newScale.toFixed(2)}, offset=(${zoomOffsetX.toFixed(0)},${zoomOffsetY.toFixed(0)})`)
         }
 
         setScale(newScale)
         setLastTouchDistance(currentDistance)
-        // lastTouchCenterは更新しない（初期位置を保持してズーム中心として使う）
-        // 代わりにパン移動量dxとdyで指の移動を追従
+      }
 
-        addStatusMessage(`🔍 ピンチ中: scale=${newScale.toFixed(2)}, zoom=(${zoomOffsetX.toFixed(0)},${zoomOffsetY.toFixed(0)}), pan=(${dx.toFixed(0)},${dy.toFixed(0)})`)
+      // パン処理（2本指スワイプ）
+      if (Math.abs(centerDx) > 2 || Math.abs(centerDy) > 2) {
+        setPanOffset(prev => ({
+          x: prev.x + centerDx,
+          y: prev.y + centerDy
+        }))
+        setLastTouchCenter(currentCenter)
       }
     }
   }
