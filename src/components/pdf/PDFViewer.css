@@ -3,6 +3,11 @@
   display: flex;
   flex-direction: column;
   background-color: #e0e0e0;
+  /* テキスト選択を無効化 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .toolbar {

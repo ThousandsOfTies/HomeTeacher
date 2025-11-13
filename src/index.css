@@ -2,6 +2,13 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* テキスト選択を無効化（全体に適用） */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  /* タップ時のハイライトを無効化（iOS Safari） */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
