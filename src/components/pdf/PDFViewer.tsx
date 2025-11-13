@@ -552,7 +552,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             y: newPanOffsetY
           })
 
-          addStatusMessage(`🔍 finger(${fingerX.toFixed(0)},${fingerY.toFixed(0)}) ratio=${scaleRatio.toFixed(3)} pan(${newPanOffsetX.toFixed(0)},${newPanOffsetY.toFixed(0)})`)
+          addStatusMessage(`🔍 old pan(${panOffset.x.toFixed(0)},${panOffset.y.toFixed(0)}) new pan(${newPanOffsetX.toFixed(0)},${newPanOffsetY.toFixed(0)}) ratio=${scaleRatio.toFixed(3)}`)
         }
 
         setScale(newScale)
