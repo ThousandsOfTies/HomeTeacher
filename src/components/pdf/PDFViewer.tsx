@@ -527,6 +527,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       const centerDx = currentCenter.x - lastTouchCenter.x
       const centerDy = currentCenter.y - lastTouchCenter.y
 
+      addStatusMessage(`📏 dist=${distanceChange.toFixed(0)} dx=${centerDx.toFixed(0)} dy=${centerDy.toFixed(0)}`)
+
       // ズーム処理
       if (Math.abs(distanceChange) > 5) {
         const scaleChange = distanceChange * 0.005
