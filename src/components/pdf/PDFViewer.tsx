@@ -1198,30 +1198,32 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             onMouseUp={finishSelection}
             onMouseLeave={finishSelection}
             onTouchStart={(e) => {
-              if (!isSelectionMode) return
+              if (!isSelectionMode || !selectionCanvasRef.current) return
               e.preventDefault()
               const touch = e.touches[0]
-              const rect = selectionCanvasRef.current!.getBoundingClientRect()
+              const canvas = selectionCanvasRef.current
+              const rect = canvas.getBoundingClientRect()
               const x = touch.clientX - rect.left
               const y = touch.clientY - rect.top
               addStatusMessage(`📱 選択タッチ開始: x=${x.toFixed(0)}, y=${y.toFixed(0)}, mode=${isSelectionMode}`)
-              startSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
+              hookStartSelection(canvas, x, y)
             }}
             onTouchMove={(e) => {
-              if (!isSelectionMode) return
+              if (!isSelecting || !isSelectionMode || !selectionCanvasRef.current) return
               e.preventDefault()
               const touch = e.touches[0]
-              const rect = selectionCanvasRef.current!.getBoundingClientRect()
+              const canvas = selectionCanvasRef.current
+              const rect = canvas.getBoundingClientRect()
               const x = touch.clientX - rect.left
               const y = touch.clientY - rect.top
               addStatusMessage(`📱 選択タッチ移動: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
-              updateSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
+              hookUpdateSelection(canvas, x, y)
             }}
             onTouchEnd={(e) => {
-              if (!isSelectionMode) return
+              if (!isSelectionMode || !canvasRef.current || !drawingCanvasRef.current) return
               e.preventDefault()
               addStatusMessage('📱 選択タッチ終了')
-              finishSelection()
+              hookFinishSelection(canvasRef.current, drawingCanvasRef.current)
             }}
           />
         </div>
