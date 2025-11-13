@@ -522,11 +522,36 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       const currentDistance = getTouchDistance(e.touches[0], e.touches[1])
       const currentCenter = getTouchCenter(e.touches[0], e.touches[1])
 
-      // ピンチイン・アウトでズーム
+      // ピンチイン・アウトでズーム（指の中心を維持）
       const distanceChange = currentDistance - lastTouchDistance
       if (Math.abs(distanceChange) > 5) {
         const scaleChange = distanceChange * 0.005
-        setScale(prev => Math.max(0.5, Math.min(5, prev + scaleChange)))
+        const oldScale = scale
+        const newScale = Math.max(0.5, Math.min(5, oldScale + scaleChange))
+
+        // ズーム中心を指の中心にするため、パンオフセットを調整
+        // コンテナの中心からの相対位置を計算
+        if (containerRef.current) {
+          const containerRect = containerRef.current.getBoundingClientRect()
+          const containerCenterX = containerRect.width / 2
+          const containerCenterY = containerRect.height / 2
+
+          // 指の中心のコンテナ中心からの相対位置
+          const relativeCenterX = currentCenter.x - containerRect.left - containerCenterX
+          const relativeCenterY = currentCenter.y - containerRect.top - containerCenterY
+
+          // スケール変化に伴うオフセット調整
+          const scaleDelta = newScale / oldScale - 1
+          const offsetDeltaX = -relativeCenterX * scaleDelta
+          const offsetDeltaY = -relativeCenterY * scaleDelta
+
+          setPanOffset(prev => ({
+            x: prev.x + offsetDeltaX,
+            y: prev.y + offsetDeltaY
+          }))
+        }
+
+        setScale(newScale)
         setLastTouchDistance(currentDistance)
       }
 
