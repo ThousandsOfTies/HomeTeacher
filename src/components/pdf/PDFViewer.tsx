@@ -719,6 +719,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   // 採点開始（範囲選択モードに切り替え）
   const startGrading = () => {
+    console.log('📱 採点モード開始')
     setIsSelectionMode(true)
     setIsDrawingMode(false) // 描画モードをオフ
     setIsEraserMode(false) // 消しゴムモードをオフ
@@ -726,6 +727,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     setShowEraserPopup(false) // ポップアップを閉じる
     setSelectionRect(null) // 選択をクリア
     console.log('採点モード: 範囲を選択してください')
+    addStatusMessage('📐 採点範囲を選択してください')
   }
 
   // 矩形選択モードをキャンセル（フックの関数を使用し、キャンバスもクリア）
@@ -1196,23 +1198,29 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             onMouseUp={finishSelection}
             onMouseLeave={finishSelection}
             onTouchStart={(e) => {
+              if (!isSelectionMode) return
               e.preventDefault()
               const touch = e.touches[0]
               const rect = selectionCanvasRef.current!.getBoundingClientRect()
-              const x = (touch.clientX - rect.left) * (selectionCanvasRef.current!.width / rect.width)
-              const y = (touch.clientY - rect.top) * (selectionCanvasRef.current!.height / rect.height)
+              const x = touch.clientX - rect.left
+              const y = touch.clientY - rect.top
+              console.log('📱 選択タッチ開始:', { x, y, isSelectionMode })
               startSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
             }}
             onTouchMove={(e) => {
+              if (!isSelectionMode) return
               e.preventDefault()
               const touch = e.touches[0]
               const rect = selectionCanvasRef.current!.getBoundingClientRect()
-              const x = (touch.clientX - rect.left) * (selectionCanvasRef.current!.width / rect.width)
-              const y = (touch.clientY - rect.top) * (selectionCanvasRef.current!.height / rect.height)
+              const x = touch.clientX - rect.left
+              const y = touch.clientY - rect.top
+              console.log('📱 選択タッチ移動:', { x, y })
               updateSelection({ nativeEvent: { offsetX: x, offsetY: y } } as any)
             }}
             onTouchEnd={(e) => {
+              if (!isSelectionMode) return
               e.preventDefault()
+              console.log('📱 選択タッチ終了')
               finishSelection()
             }}
           />
