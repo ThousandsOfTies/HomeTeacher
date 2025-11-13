@@ -510,7 +510,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       const center = getTouchCenter(e.touches[0], e.touches[1])
       setLastTouchDistance(distance)
       setLastTouchCenter(center)
-      console.log('2本指タッチ開始')
+      addStatusMessage(`🔍 ピンチ開始: 中心(${center.x.toFixed(0)}, ${center.y.toFixed(0)})`)
     }
   }
 
@@ -532,6 +532,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         const oldScale = scale
         const newScale = Math.max(0.5, Math.min(5, oldScale + scaleChange))
 
+        let zoomOffsetX = 0
+        let zoomOffsetY = 0
+
         // ズーム中心を指の中心にするため、パンオフセットを調整
         if (containerRef.current) {
           const containerRect = containerRef.current.getBoundingClientRect()
@@ -544,8 +547,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
           // スケール変化に伴うオフセット調整
           const scaleDelta = newScale / oldScale - 1
-          const zoomOffsetX = -relativeCenterX * scaleDelta
-          const zoomOffsetY = -relativeCenterY * scaleDelta
+          zoomOffsetX = -relativeCenterX * scaleDelta
+          zoomOffsetY = -relativeCenterY * scaleDelta
 
           // ズームオフセット + パン移動を同時に適用
           setPanOffset(prev => ({
@@ -562,10 +565,11 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
         setScale(newScale)
         setLastTouchDistance(currentDistance)
-        setLastTouchCenter(currentCenter)
-      }
+        // lastTouchCenterは更新しない（初期位置を保持してズーム中心として使う）
+        // 代わりにパン移動量dxとdyで指の移動を追従
 
-      console.log('ピンチ/パン中: scale change =', distanceChange)
+        addStatusMessage(`🔍 ピンチ中: scale=${newScale.toFixed(2)}, zoom=(${zoomOffsetX.toFixed(0)},${zoomOffsetY.toFixed(0)}), pan=(${dx.toFixed(0)},${dy.toFixed(0)})`)
+      }
     }
   }
 
