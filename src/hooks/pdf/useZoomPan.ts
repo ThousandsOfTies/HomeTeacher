@@ -49,15 +49,41 @@ export const useZoomPan = (containerRef: React.RefObject<HTMLDivElement>) => {
     })
   }
 
-  // Ctrl+ホイールでズーム
+  // Ctrl+ホイールでズーム（マウスカーソルを中心に）
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (containerRef.current && containerRef.current.contains(e.target as Node)) {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault()
           e.stopPropagation()
+
           const delta = e.deltaY > 0 ? -0.1 : 0.1
-          setScale(prev => Math.max(0.5, Math.min(5, prev + delta)))
+
+          setScale(prev => {
+            const oldScale = prev
+            const newScale = Math.max(0.5, Math.min(5, prev + delta))
+
+            // マウスカーソルを中心にズームするため、パンオフセットを調整
+            const containerRect = containerRef.current!.getBoundingClientRect()
+            const containerCenterX = containerRect.width / 2
+            const containerCenterY = containerRect.height / 2
+
+            // マウスカーソルのコンテナ中心からの相対位置
+            const relativeCursorX = e.clientX - containerRect.left - containerCenterX
+            const relativeCursorY = e.clientY - containerRect.top - containerCenterY
+
+            // スケール変化に伴うオフセット調整
+            const scaleDelta = newScale / oldScale - 1
+            const offsetDeltaX = -relativeCursorX * scaleDelta
+            const offsetDeltaY = -relativeCursorY * scaleDelta
+
+            setPanOffset(prev => ({
+              x: prev.x + offsetDeltaX,
+              y: prev.y + offsetDeltaY
+            }))
+
+            return newScale
+          })
         }
       }
     }
