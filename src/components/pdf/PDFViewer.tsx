@@ -536,24 +536,28 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         // ズーム中心を現在の指の中心にするため、パンオフセットを調整
         if (containerRef.current) {
           const containerRect = containerRef.current.getBoundingClientRect()
-          const containerCenterX = containerRect.width / 2
-          const containerCenterY = containerRect.height / 2
 
-          // 現在の指の中心のコンテナ中心からの相対位置（画面座標系）
-          const relativeCenterX = currentCenter.x - containerRect.left - containerCenterX
-          const relativeCenterY = currentCenter.y - containerRect.top - containerCenterY
+          // 指の位置のビューポート座標
+          const fingerX = currentCenter.x - containerRect.left
+          const fingerY = currentCenter.y - containerRect.top
 
-          // スケール変化に伴うオフセット調整
-          const scaleDelta = newScale / oldScale - 1
-          const zoomOffsetX = -relativeCenterX * scaleDelta
-          const zoomOffsetY = -relativeCenterY * scaleDelta
+          // 現在のパンオフセットを考慮した、指が指しているコンテンツ上の座標
+          // (fingerX - panOffset.x) / oldScale が実際のコンテンツ座標
+          // スケール変更後、同じコンテンツ座標が fingerX に来るように調整
+          const scaleRatio = newScale / oldScale
 
-          setPanOffset(prev => ({
-            x: prev.x + zoomOffsetX,
-            y: prev.y + zoomOffsetY
-          }))
+          // 新しいパンオフセットを計算
+          // fingerX = (contentX * newScale) + newPanOffsetX
+          // fingerX = (contentX * oldScale + oldPanOffsetX) * scaleRatio + adjustment
+          const newPanOffsetX = fingerX - (fingerX - panOffset.x) * scaleRatio
+          const newPanOffsetY = fingerY - (fingerY - panOffset.y) * scaleRatio
 
-          addStatusMessage(`🔍 中心(${currentCenter.x.toFixed(0)},${currentCenter.y.toFixed(0)}) 相対(${relativeCenterX.toFixed(0)},${relativeCenterY.toFixed(0)}) zoom(${zoomOffsetX.toFixed(0)},${zoomOffsetY.toFixed(0)})`)
+          setPanOffset({
+            x: newPanOffsetX,
+            y: newPanOffsetY
+          })
+
+          addStatusMessage(`🔍 finger(${fingerX.toFixed(0)},${fingerY.toFixed(0)}) scale=${newScale.toFixed(2)} pan(${newPanOffsetX.toFixed(0)},${newPanOffsetY.toFixed(0)})`)
         }
 
         setScale(newScale)
