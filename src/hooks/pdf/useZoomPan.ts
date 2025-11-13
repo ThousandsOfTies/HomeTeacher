@@ -58,31 +58,30 @@ export const useZoomPan = (containerRef: React.RefObject<HTMLDivElement>) => {
           e.stopPropagation()
 
           const delta = e.deltaY > 0 ? -0.1 : 0.1
+          const oldScale = scale
+          const newScale = Math.max(0.5, Math.min(5, oldScale + delta))
 
-          setScale(prev => {
-            const oldScale = prev
-            const newScale = Math.max(0.5, Math.min(5, prev + delta))
+          // マウスカーソルを中心にズームするため、パンオフセットを調整
+          const containerRect = containerRef.current.getBoundingClientRect()
 
-            // マウスカーソルを中心にズームするため、パンオフセットを調整
-            const containerRect = containerRef.current!.getBoundingClientRect()
-            const containerCenterX = containerRect.width / 2
-            const containerCenterY = containerRect.height / 2
+          // マウスカーソルのコンテナ内での位置
+          const cursorX = e.clientX - containerRect.left
+          const cursorY = e.clientY - containerRect.top
 
-            // マウスカーソルのコンテナ中心からの相対位置
-            const relativeCursorX = e.clientX - containerRect.left - containerCenterX
-            const relativeCursorY = e.clientY - containerRect.top - containerCenterY
+          // 現在のpanOffsetを考慮した、カーソルが指しているコンテンツ座標
+          // contentX = (cursorX - panOffset.x) / oldScale
+          // ズーム後も同じコンテンツ座標がcursorXに来るように調整
+          // cursorX = contentX * newScale + newPanOffset
+          // newPanOffset = cursorX - contentX * newScale
+          //              = cursorX - (cursorX - oldPanOffset) * (newScale / oldScale)
+          const scaleRatio = newScale / oldScale
+          const newPanOffsetX = cursorX - (cursorX - panOffset.x) * scaleRatio
+          const newPanOffsetY = cursorY - (cursorY - panOffset.y) * scaleRatio
 
-            // スケール変化に伴うオフセット調整
-            const scaleDelta = newScale / oldScale - 1
-            const offsetDeltaX = -relativeCursorX * scaleDelta
-            const offsetDeltaY = -relativeCursorY * scaleDelta
-
-            setPanOffset(prev => ({
-              x: prev.x + offsetDeltaX,
-              y: prev.y + offsetDeltaY
-            }))
-
-            return newScale
+          setScale(newScale)
+          setPanOffset({
+            x: newPanOffsetX,
+            y: newPanOffsetY
           })
         }
       }
@@ -92,7 +91,7 @@ export const useZoomPan = (containerRef: React.RefObject<HTMLDivElement>) => {
     return () => {
       document.removeEventListener('wheel', handleWheel)
     }
-  }, [containerRef])
+  }, [containerRef, scale, panOffset])
 
   // Ctrlキーの状態を追跡
   useEffect(() => {
