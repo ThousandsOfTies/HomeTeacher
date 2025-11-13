@@ -562,10 +562,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
         setScale(newScale)
         setLastTouchDistance(currentDistance)
-      }
-
-      // パン処理（2本指スワイプ）
-      if (Math.abs(centerDx) > 2 || Math.abs(centerDy) > 2) {
+        setLastTouchCenter(currentCenter) // ズーム後は中心位置も更新（パン計算の基準点として）
+      } else if (Math.abs(centerDx) > 2 || Math.abs(centerDy) > 2) {
+        // パン処理（2本指スワイプ）- ズームしていない時のみ
         setPanOffset(prev => ({
           x: prev.x + centerDx,
           y: prev.y + centerDy
