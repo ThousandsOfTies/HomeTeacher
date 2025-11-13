@@ -1213,7 +1213,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             }}
             onTouchEnd={(e) => {
               e.preventDefault()
-              finishSelection({ nativeEvent: {} } as any)
+              finishSelection()
             }}
           />
         </div>
