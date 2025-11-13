@@ -539,7 +539,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           const containerCenterX = containerRect.width / 2
           const containerCenterY = containerRect.height / 2
 
-          // 現在の指の中心のコンテナ中心からの相対位置
+          // 現在の指の中心のコンテナ中心からの相対位置（画面座標系）
           const relativeCenterX = currentCenter.x - containerRect.left - containerCenterX
           const relativeCenterY = currentCenter.y - containerRect.top - containerCenterY
 
@@ -553,7 +553,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             y: prev.y + zoomOffsetY
           }))
 
-          addStatusMessage(`🔍 ズーム: scale=${newScale.toFixed(2)}, offset=(${zoomOffsetX.toFixed(0)},${zoomOffsetY.toFixed(0)})`)
+          addStatusMessage(`🔍 中心(${currentCenter.x.toFixed(0)},${currentCenter.y.toFixed(0)}) 相対(${relativeCenterX.toFixed(0)},${relativeCenterY.toFixed(0)}) zoom(${zoomOffsetX.toFixed(0)},${zoomOffsetY.toFixed(0)})`)
         }
 
         setScale(newScale)
