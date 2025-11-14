@@ -18,6 +18,7 @@ const getSNSIcon = (name: string): { svg: string; color: string } | null => {
   const iconMap: Record<string, string> = {
     'x': 'siX',
     'twitter': 'siX',
+    'x(twitter)': 'siX',  // 'X (Twitter)' の正規化形
     'youtube': 'siYoutube',
     'instagram': 'siInstagram',
     'facebook': 'siFacebook',
