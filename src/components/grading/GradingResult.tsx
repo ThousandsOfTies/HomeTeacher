@@ -14,6 +14,8 @@ const getSNSIcon = (name: string): { svg: string; color: string } | null => {
   // 名前を正規化（小文字化、スペース除去）
   const normalizedName = name.toLowerCase().replace(/\s+/g, '')
 
+  console.log('🔍 getSNSIcon called:', { original: name, normalized: normalizedName })
+
   // よく使われるSNSのマッピング
   const iconMap: Record<string, string> = {
     'x': 'siX',
@@ -38,14 +40,18 @@ const getSNSIcon = (name: string): { svg: string; color: string } | null => {
   }
 
   const iconKey = iconMap[normalizedName]
+  console.log('🔍 Icon lookup:', { normalizedName, iconKey, exists: iconKey && iconKey in SimpleIcons })
+
   if (iconKey && iconKey in SimpleIcons) {
     const icon = SimpleIcons[iconKey as keyof typeof SimpleIcons] as SimpleIcons.SimpleIcon
+    console.log('✅ Icon found:', { iconKey, hasSVG: !!icon.svg })
     return {
       svg: icon.svg,
       color: `#${icon.hex}`
     }
   }
 
+  console.log('❌ Icon not found, will use fallback emoji')
   return null
 }
 
