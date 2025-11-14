@@ -8,15 +8,81 @@ dotenv.config()
 const app = express()
 const port = process.env.PORT || 3003
 
-// ミドルウェア
-app.use(cors())
+// CORS設定（セキュリティ強化版）
+const allowedOrigins = [
+  // 本番環境（GitHub Pages）
+  'https://thousandsofties.github.io',
+
+  // 開発環境（localhost全般を許可）
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+]
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // originがundefined = 同一オリジンリクエスト（許可）
+    if (!origin) return callback(null, true)
+
+    // 許可リストチェック（文字列またはRegex）
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return allowed === origin
+      } else {
+        return allowed.test(origin)
+      }
+    })
+
+    if (isAllowed) {
+      callback(null, true)
+    } else {
+      console.warn(`🚫 CORS blocked: ${origin}`)
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  methods: ['POST', 'GET'],
+  credentials: false
+}))
+
 app.use(express.json({ limit: '50mb' }))
 
 // Gemini APIクライアント
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
+// シンプルなレート制限（メモリベース）
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15分
+const RATE_LIMIT_MAX = 20 // 15分間に20リクエストまで
+
+const checkRateLimit = (identifier: string): boolean => {
+  const now = Date.now()
+  const record = rateLimitMap.get(identifier)
+
+  if (!record || now > record.resetTime) {
+    // 新規または期限切れ
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+    return true
+  }
+
+  if (record.count >= RATE_LIMIT_MAX) {
+    // 制限超過
+    return false
+  }
+
+  // カウント増加
+  record.count++
+  return true
+}
+
 // 採点エンドポイント
 app.post('/api/grade', async (req, res) => {
+  // レート制限チェック（IPアドレスベース）
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown'
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({
+      error: 'リクエストが多すぎます',
+      details: '15分後に再度お試しください'
+    })
+  }
   try {
     const { imageData, pageNumber, problemContext } = req.body
 
