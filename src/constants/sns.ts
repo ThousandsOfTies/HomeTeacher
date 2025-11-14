@@ -10,7 +10,7 @@ export type PredefinedSNS = {
 
 export const PREDEFINED_SNS: PredefinedSNS[] = [
   { id: 'youtube', name: 'YouTube', defaultUrl: 'https://www.youtube.com/', icon: '📺' },
-  { id: 'x', name: 'X (Twitter)', defaultUrl: 'https://x.com/', icon: '🐦' },
+  { id: 'x', name: 'X (Twitter)', defaultUrl: 'https://x.com/', icon: '❌' },
   { id: 'instagram', name: 'Instagram', defaultUrl: 'https://www.instagram.com/', icon: '📷' },
   { id: 'tiktok', name: 'TikTok', defaultUrl: 'https://www.tiktok.com/', icon: '🎵' },
   { id: 'facebook', name: 'Facebook', defaultUrl: 'https://www.facebook.com/', icon: '👥' },
