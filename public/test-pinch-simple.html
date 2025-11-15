@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>正しいピンチズーム実装</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      background: #e0e0e0;
+    }
+
+    /* 重要: transformを適用する要素は画面全体に広げる */
+    .viewport {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* transform-origin: 0 0 が重要 */
+    .canvas-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      /* 初期位置は画面中央にコンテンツを配置 */
+      transform: translate(calc(50vw - 200px), calc(50vh - 300px));
+    }
+
+    .canvas {
+      width: 400px;
+      height: 600px;
+      background: white;
+      border: 3px solid #333;
+      position: relative;
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(0deg, #ddd 1px, transparent 1px),
+        linear-gradient(90deg, #ddd 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .center-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+    }
+
+    .info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 1000;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+      gap: 15px;
+    }
+
+    .info-label {
+      color: #aaa;
+    }
+
+    .info-value {
+      color: #0f0;
+      font-weight: bold;
+    }
+
+    .title {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 50, 50, 0.9);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">正しい基本構造</div>
+
+  <div class="info">
+    <div class="info-row">
+      <span class="info-label">Scale:</span>
+      <span class="info-value" id="scale">1.00</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">OriginX:</span>
+      <span class="info-value" id="ox">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">OriginY:</span>
+      <span class="info-value" id="oy">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Touches:</span>
+      <span class="info-value" id="touches">0</span>
+    </div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="canvas-layer" id="layer">
+      <div class="canvas">
+        <div class="grid"></div>
+        <div class="center-mark">●</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const viewport = document.getElementById('viewport')
+    const layer = document.getElementById('layer')
+
+    // 変換の状態
+    let scale = 1.0
+    let originX = window.innerWidth / 2 - 200  // canvas中心を画面中央に
+    let originY = window.innerHeight / 2 - 300
+
+    // ピンチ状態
+    let initialDistance = null
+    let initialScale = null
+    let initialOriginX = null
+    let initialOriginY = null
+    let pinchCenterX = null
+    let pinchCenterY = null
+
+    function applyTransform() {
+      layer.style.transform = `translate(${originX}px, ${originY}px) scale(${scale})`
+      
+      document.getElementById('scale').textContent = scale.toFixed(3)
+      document.getElementById('ox').textContent = Math.round(originX)
+      document.getElementById('oy').textContent = Math.round(originY)
+    }
+
+    function getDistance(t1, t2) {
+      const dx = t1.clientX - t2.clientX
+      const dy = t1.clientY - t2.clientY
+      return Math.sqrt(dx * dx + dy * dy)
+    }
+
+    viewport.addEventListener('touchstart', (e) => {
+      document.getElementById('touches').textContent = e.touches.length
+
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        
+        const t1 = e.touches[0]
+        const t2 = e.touches[1]
+        
+        // 初期値を保存
+        initialDistance = getDistance(t1, t2)
+        initialScale = scale
+        initialOriginX = originX
+        initialOriginY = originY
+        
+        // ピンチの中心点（ビューポート座標）
+        pinchCenterX = (t1.clientX + t2.clientX) / 2
+        pinchCenterY = (t1.clientY + t2.clientY) / 2
+      }
+    }, { passive: false })
+
+    viewport.addEventListener('touchmove', (e) => {
+      document.getElementById('touches').textContent = e.touches.length
+
+      if (e.touches.length === 2 && initialDistance !== null) {
+        e.preventDefault()
+        
+        const t1 = e.touches[0]
+        const t2 = e.touches[1]
+        
+        // 現在の距離
+        const currentDistance = getDistance(t1, t2)
+        
+        // スケール比率
+        const ratio = currentDistance / initialDistance
+        scale = Math.max(0.5, Math.min(5.0, initialScale * ratio))
+        
+        // ピンチ中心からのオフセット計算
+        // 公式: newOrigin = pinchCenter - (pinchCenter - initialOrigin) * (newScale / initialScale)
+        originX = pinchCenterX - (pinchCenterX - initialOriginX) * (scale / initialScale)
+        originY = pinchCenterY - (pinchCenterY - initialOriginY) * (scale / initialScale)
+        
+        applyTransform()
+      }
+    }, { passive: false })
+
+    viewport.addEventListener('touchend', (e) => {
+      document.getElementById('touches').textContent = e.touches.length
+
+      if (e.touches.length < 2) {
+        initialDistance = null
+        initialScale = null
+        initialOriginX = null
+        initialOriginY = null
+        pinchCenterX = null
+        pinchCenterY = null
+      }
+    }, { passive: false })
+
+    // 初期表示
+    applyTransform()
+    
+    console.log('✅ 正しい基本構造のピンチズーム')
+    console.log('📐 transform-origin: 0 0')
+    console.log('📱 touchstartで初期値保存 → touchmoveで初期値から計算')
+  </script>
+</body>
+</html>
