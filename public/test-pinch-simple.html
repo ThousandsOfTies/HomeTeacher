@@ -310,22 +310,24 @@
 
     // 再レンダリング関数（操作終了後に呼ばれる）
     function rerenderAtCurrentScale() {
-      // 現在の transform を一時的に解除
-      const currentTransform = layer.style.transform
+      // レンダリング前のキャンバスサイズとスケールを保存
+      const oldCanvasWidth = canvas.width
+      const oldCanvasHeight = canvas.height
+      const oldScale = scale
       
-      // キャンバス中心のビューポート座標を計算
-      const canvasCenterX = originX + (canvas.width / 2)
-      const canvasCenterY = originY + (canvas.height / 2)
+      // キャンバス中心のビューポート座標を計算（transformスケール適用後の座標）
+      const canvasCenterX = originX + (oldCanvasWidth * oldScale / 2)
+      const canvasCenterY = originY + (oldCanvasHeight * oldScale / 2)
       
-      // 新しいスケールでレンダリング
-      renderPDFContent(scale)
+      // 新しいスケールでレンダリング（キャンバスサイズが BASE_WIDTH*scale になる）
+      renderPDFContent(oldScale)
       
       // レンダリング後、キャンバスサイズが変わったので origin を調整
-      // キャンバスの中心位置が変わらないように
+      // 新しいキャンバスの中心が同じビューポート座標になるように
       originX = canvasCenterX - (canvas.width / 2)
       originY = canvasCenterY - (canvas.height / 2)
       
-      // Transform を scale=1 に戻す（既にキャンバス自体がスケール済み）
+      // Transform の scale を 1.0 に戻す（キャンバス自体が既にスケール済み）
       scale = 1.0
       applyTransform()
     }
