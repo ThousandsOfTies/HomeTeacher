@@ -35,30 +35,29 @@
     .canvas-wrapper {
       position: relative;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      /* サイズは動的に変わる（ズームに応じて） */
     }
 
-    /* canvas-pan-layer: translate変換 */
+    /* canvas-pan-layer: translate変換のみ */
     .canvas-pan-layer {
       position: relative;
       transform-origin: 0 0;
       transition: none;
     }
 
-    /* canvas-scale-layer: scale変換 */
-    .canvas-scale-layer {
-      position: relative;
-      transform-origin: 0 0;
-      transition: none;
-    }
+    /* canvas-scale-layer: 削除（実際のHomeTeacherにはない） */
+    /* 代わりにcanvas自体のサイズを変更する */
 
     /* 疑似canvas（画像） */
     .fake-canvas {
       display: block;
+      /* 基本サイズ（ズーム=1.0の時） */
       width: 600px;
       height: 800px;
       background: white;
       border: 2px solid #333;
       position: relative;
+      /* サイズはJavaScriptで動的に変更される */
     }
 
     /* グリッド線を描画して動きを確認しやすく */
@@ -147,10 +146,8 @@
   <div class="container" id="container">
     <div class="canvas-wrapper" id="wrapper">
       <div class="canvas-pan-layer" id="panLayer">
-        <div class="canvas-scale-layer" id="scaleLayer">
-          <div class="fake-canvas">
-            <div class="center-marker">●</div>
-          </div>
+        <div class="fake-canvas" id="fakeCanvas">
+          <div class="center-marker">●</div>
         </div>
       </div>
     </div>
@@ -167,7 +164,9 @@
     <div style="margin-top: 10px; color: #FFB6C1; font-size: 11px;">
       ※ container基準の座標<br>
       ※ overflow:auto でスクロール可能<br>
-      ※ wrapper は flex で中央配置
+      ※ wrapper は flex で中央配置<br>
+      ※ canvas サイズを実際に変更<br>
+      　（transform scale は使わない）
     </div>
   </div>
 
@@ -178,6 +177,8 @@
 
   <script>
     // 状態管理
+    const BASE_WIDTH = 600
+    const BASE_HEIGHT = 800
     let zoom = 1.0
     let panOffset = { x: 0, y: 0 }
     let prevPinchDistance = null
@@ -188,7 +189,7 @@
     // DOM要素
     const container = document.getElementById('container')
     const panLayer = document.getElementById('panLayer')
-    const scaleLayer = document.getElementById('scaleLayer')
+    const fakeCanvas = document.getElementById('fakeCanvas')
     const marker1 = document.getElementById('marker1')
     const marker2 = document.getElementById('marker2')
     const markerCenter = document.getElementById('markerCenter')
@@ -200,10 +201,21 @@
       document.getElementById('panYValue').textContent = Math.round(panOffset.y)
     }
 
-    // Transform適用
+    // Transform適用（HomeTeacherと同じ方式：要素サイズを変更）
     function applyTransform() {
+      // Pan: translate変換
       panLayer.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`
-      scaleLayer.style.transform = `scale(${zoom})`
+      
+      // Zoom: canvasのサイズを実際に変更（transformは使わない）
+      const newWidth = BASE_WIDTH * zoom
+      const newHeight = BASE_HEIGHT * zoom
+      fakeCanvas.style.width = newWidth + 'px'
+      fakeCanvas.style.height = newHeight + 'px'
+      
+      // グリッド線もズームに応じて拡大
+      const gridSize = 50 * zoom
+      fakeCanvas.style.backgroundSize = `${gridSize}px ${gridSize}px`
+      
       updateDebug()
     }
 
@@ -316,12 +328,22 @@
         const oldZoom = zoom
         const newZoom = Math.max(0.5, Math.min(5, oldZoom * distanceRatio))
 
-        // Google Maps方式：指の中心がズーム後も同じコンテンツ位置を指す
-        const contentX = (currentCenterX - panOffset.x) / oldZoom
-        const contentY = (currentCenterY - panOffset.y) / oldZoom
+        // HomeTeacher方式：要素サイズが変わる
+        // 座標変換の公式は同じだが、canvasサイズが変わることに注意
+        // 
+        // 現在のcanvasサイズ = BASE_SIZE * oldZoom
+        // 新しいcanvasサイズ = BASE_SIZE * newZoom
+        // 
+        // canvasの論理座標（0～BASE_SIZE）は変わらない
+        // 物理座標（ピクセル）= 論理座標 * zoom
+        
+        // 中心点が指すcanvas上の論理座標を計算
+        const canvasLogicalX = (currentCenterX - panOffset.x) / oldZoom
+        const canvasLogicalY = (currentCenterY - panOffset.y) / oldZoom
 
-        const newOffsetX = currentCenterX - contentX * newZoom
-        const newOffsetY = currentCenterY - contentY * newZoom
+        // 新しいzoomで同じ論理座標が中心点に来るようにpanOffsetを調整
+        const newOffsetX = currentCenterX - canvasLogicalX * newZoom
+        const newOffsetY = currentCenterY - canvasLogicalY * newZoom
 
         panOffset.x = newOffsetX
         panOffset.y = newOffsetY
@@ -374,6 +396,7 @@
 
     console.log('✅ ピンチズームテストページ準備完了')
     console.log('📱 iPadで2本指でピンチズームしてください')
+    console.log('🎨 HomeTeacherと同じ方式：要素サイズを実際に変更（transform scaleは使わない）')
   </script>
 </body>
 </html>
