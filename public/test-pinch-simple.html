@@ -201,19 +201,29 @@
     const drawingCanvas = document.getElementById('drawing-canvas')
     const drawingCtx = drawingCanvas.getContext('2d')
 
-    // サンプルPDFを生成（canvas上に直接描画）
-    async function createSamplePDF() {
-      // Canvas size設定
-      canvas.width = 600
-      canvas.height = 800
+    // PDFの基本サイズ（1倍時）
+    const BASE_WIDTH = 600
+    const BASE_HEIGHT = 800
+
+    // PDFコンテンツを描画する関数（scale倍で描画）
+    function renderPDFContent(targetScale) {
+      // キャンバスサイズを scale に合わせる
+      const scaledWidth = BASE_WIDTH * targetScale
+      const scaledHeight = BASE_HEIGHT * targetScale
+      
+      canvas.width = scaledWidth
+      canvas.height = scaledHeight
       
       // 描画キャンバスも同じサイズに
-      drawingCanvas.width = canvas.width
-      drawingCanvas.height = canvas.height
+      drawingCanvas.width = scaledWidth
+      drawingCanvas.height = scaledHeight
+      
+      // スケールに合わせて描画
+      ctx.scale(targetScale, targetScale)
       
       // 白背景
       ctx.fillStyle = 'white'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT)
       
       // タイトル
       ctx.fillStyle = 'black'
@@ -244,25 +254,29 @@
       // グリッド線（マス目）
       ctx.strokeStyle = '#eee'
       ctx.lineWidth = 1
-      for (let i = 0; i < canvas.width; i += 50) {
+      for (let i = 0; i < BASE_WIDTH; i += 50) {
         ctx.beginPath()
         ctx.moveTo(i, 0)
-        ctx.lineTo(i, canvas.height)
+        ctx.lineTo(i, BASE_HEIGHT)
         ctx.stroke()
       }
-      for (let i = 0; i < canvas.height; i += 50) {
+      for (let i = 0; i < BASE_HEIGHT; i += 50) {
         ctx.beginPath()
         ctx.moveTo(0, i)
-        ctx.lineTo(canvas.width, i)
+        ctx.lineTo(BASE_WIDTH, i)
         ctx.stroke()
       }
       
       // 枠線
       ctx.strokeStyle = '#333'
       ctx.lineWidth = 2
-      ctx.strokeRect(0, 0, canvas.width, canvas.height)
+      ctx.strokeRect(0, 0, BASE_WIDTH, BASE_HEIGHT)
       
-      // 描画キャンバスにテスト描画（赤い×マーク）
+      // スケールをリセット
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      
+      // 描画キャンバスにテスト描画（赤い×マーク）- スケール適用
+      drawingCtx.scale(targetScale, targetScale)
       drawingCtx.strokeStyle = 'red'
       drawingCtx.lineWidth = 3
       drawingCtx.beginPath()
@@ -278,6 +292,12 @@
       drawingCtx.beginPath()
       drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
       drawingCtx.stroke()
+      drawingCtx.setTransform(1, 0, 0, 1, 0, 0)
+    }
+
+    // 初期描画
+    async function createSamplePDF() {
+      renderPDFContent(1.0)
       
       console.log('✅ Sample PDF created:', canvas.width, 'x', canvas.height)
       console.log('✅ Drawing layer added with test marks')
@@ -285,6 +305,28 @@
       // 初期位置を画面中央に設定
       originX = window.innerWidth / 2 - canvas.width / 2
       originY = window.innerHeight / 2 - canvas.height / 2
+      applyTransform()
+    }
+
+    // 再レンダリング関数（操作終了後に呼ばれる）
+    function rerenderAtCurrentScale() {
+      // 現在の transform を一時的に解除
+      const currentTransform = layer.style.transform
+      
+      // キャンバス中心のビューポート座標を計算
+      const canvasCenterX = originX + (canvas.width / 2)
+      const canvasCenterY = originY + (canvas.height / 2)
+      
+      // 新しいスケールでレンダリング
+      renderPDFContent(scale)
+      
+      // レンダリング後、キャンバスサイズが変わったので origin を調整
+      // キャンバスの中心位置が変わらないように
+      originX = canvasCenterX - (canvas.width / 2)
+      originY = canvasCenterY - (canvas.height / 2)
+      
+      // Transform を scale=1 に戻す（既にキャンバス自体がスケール済み）
+      scale = 1.0
       applyTransform()
     }
 
@@ -373,6 +415,12 @@
       document.getElementById('touches').textContent = e.touches.length
 
       if (e.touches.length < 2) {
+        // ピンチ操作が終了したら再レンダリング
+        if (initialDistance !== null) {
+          console.log('🔄 Pinch ended, re-rendering at scale:', scale.toFixed(2))
+          rerenderAtCurrentScale()
+        }
+        
         initialDistance = null
         initialScale = null
         initialOriginX = null
