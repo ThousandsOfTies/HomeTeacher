@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>基本ピンチズーム - 最小実装</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .container {
+      width: 100vw;
+      height: 100vh;
+      background: #e0e0e0;
+      overflow: auto;
+      position: relative;
+    }
+
+    .content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      height: 600px;
+      background: white;
+      border: 3px solid #333;
+      transform-origin: 0 0;
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(0deg, #ddd 1px, transparent 1px),
+        linear-gradient(90deg, #ddd 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .center-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+    }
+
+    .info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 1000;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+      gap: 15px;
+    }
+
+    .info-label {
+      color: #aaa;
+    }
+
+    .info-value {
+      color: #0f0;
+      font-weight: bold;
+    }
+
+    .title {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 100, 200, 0.9);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">基本ピンチズーム（最小実装）</div>
+
+  <div class="info" id="info">
+    <div class="info-row">
+      <span class="info-label">Scale:</span>
+      <span class="info-value" id="scale">1.00</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">TranslateX:</span>
+      <span class="info-value" id="tx">0</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">TranslateY:</span>
+      <span class="info-value" id="ty">0</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Touches:</span>
+      <span class="info-value" id="touches">0</span>
+    </div>
+  </div>
+
+  <div class="container" id="container">
+    <div class="content" id="content">
+      <div class="grid"></div>
+      <div class="center-mark">●</div>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('container')
+    const content = document.getElementById('content')
+
+    // 現在の変換状態
+    let scale = 1.0
+    let translateX = -200  // 初期位置：中央（width/2）
+    let translateY = -300  // 初期位置：中央（height/2）
+
+    // ピンチズーム用の前回値
+    let lastDistance = null
+    let lastCenterX = null
+    let lastCenterY = null
+
+    function updateTransform() {
+      content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`
+      
+      document.getElementById('scale').textContent = scale.toFixed(2)
+      document.getElementById('tx').textContent = Math.round(translateX)
+      document.getElementById('ty').textContent = Math.round(translateY)
+    }
+
+    function getDistance(touch1, touch2) {
+      const dx = touch1.clientX - touch2.clientX
+      const dy = touch1.clientY - touch2.clientY
+      return Math.sqrt(dx * dx + dy * dy)
+    }
+
+    function getCenter(touch1, touch2) {
+      return {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2
+      }
+    }
+
+    container.addEventListener('touchstart', (e) => {
+      document.getElementById('touches').textContent = e.touches.length
+
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+        
+        lastDistance = getDistance(touch1, touch2)
+        const center = getCenter(touch1, touch2)
+        lastCenterX = center.x
+        lastCenterY = center.y
+      }
+    }, { passive: false })
+
+    container.addEventListener('touchmove', (e) => {
+      document.getElementById('touches').textContent = e.touches.length
+
+      if (e.touches.length === 2 && lastDistance !== null) {
+        e.preventDefault()
+        
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+        
+        // 新しい距離と中心を計算
+        const newDistance = getDistance(touch1, touch2)
+        const newCenter = getCenter(touch1, touch2)
+        
+        // ズーム倍率の変化
+        const scaleChange = newDistance / lastDistance
+        const oldScale = scale
+        scale = Math.max(0.5, Math.min(5.0, scale * scaleChange))
+        
+        // 指の中心がビューポート上で指しているコンテンツ座標
+        // コンテンツ座標 = (ビューポート座標 - translate) / scale
+        const contentX = (lastCenterX - translateX) / oldScale
+        const contentY = (lastCenterY - translateY) / oldScale
+        
+        // ズーム後も同じコンテンツ座標が指の中心に来るように調整
+        translateX = lastCenterX - contentX * scale
+        translateY = lastCenterY - contentY * scale
+        
+        // パン（指の中心の移動）
+        const centerDx = newCenter.x - lastCenterX
+        const centerDy = newCenter.y - lastCenterY
+        translateX += centerDx
+        translateY += centerDy
+        
+        // 前回値を更新
+        lastDistance = newDistance
+        lastCenterX = newCenter.x
+        lastCenterY = newCenter.y
+        
+        updateTransform()
+      }
+    }, { passive: false })
+
+    container.addEventListener('touchend', (e) => {
+      document.getElementById('touches').textContent = e.touches.length
+
+      if (e.touches.length < 2) {
+        lastDistance = null
+        lastCenterX = null
+        lastCenterY = null
+      }
+    }, { passive: false })
+
+    // 初期表示
+    updateTransform()
+    
+    console.log('✅ 基本ピンチズーム準備完了')
+    console.log('📱 2本指でピンチズームしてください')
+    console.log('🎯 赤い円が中心からずれないか確認してください')
+  </script>
+</body>
+</html>
