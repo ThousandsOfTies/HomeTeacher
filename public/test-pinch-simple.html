@@ -44,6 +44,14 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
+    /* 描画キャンバス（PDFの上に重ねる） */
+    .drawing-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+
     .info {
       position: fixed;
       top: 10px;
@@ -163,6 +171,7 @@
   <div class="viewport" id="viewport">
     <div class="canvas-layer" id="layer">
       <canvas id="canvas" class="canvas"></canvas>
+      <canvas id="drawing-canvas" class="drawing-canvas"></canvas>
     </div>
   </div>
 
@@ -189,12 +198,18 @@
     const layer = document.getElementById('layer')
     const canvas = document.getElementById('canvas')
     const ctx = canvas.getContext('2d')
+    const drawingCanvas = document.getElementById('drawing-canvas')
+    const drawingCtx = drawingCanvas.getContext('2d')
 
     // サンプルPDFを生成（canvas上に直接描画）
     async function createSamplePDF() {
       // Canvas size設定
       canvas.width = 600
       canvas.height = 800
+      
+      // 描画キャンバスも同じサイズに
+      drawingCanvas.width = canvas.width
+      drawingCanvas.height = canvas.height
       
       // 白背景
       ctx.fillStyle = 'white'
@@ -247,7 +262,25 @@
       ctx.lineWidth = 2
       ctx.strokeRect(0, 0, canvas.width, canvas.height)
       
+      // 描画キャンバスにテスト描画（赤い×マーク）
+      drawingCtx.strokeStyle = 'red'
+      drawingCtx.lineWidth = 3
+      drawingCtx.beginPath()
+      drawingCtx.moveTo(100, 150)
+      drawingCtx.lineTo(150, 200)
+      drawingCtx.moveTo(150, 150)
+      drawingCtx.lineTo(100, 200)
+      drawingCtx.stroke()
+      
+      // 青い丸
+      drawingCtx.strokeStyle = 'blue'
+      drawingCtx.lineWidth = 3
+      drawingCtx.beginPath()
+      drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
+      drawingCtx.stroke()
+      
       console.log('✅ Sample PDF created:', canvas.width, 'x', canvas.height)
+      console.log('✅ Drawing layer added with test marks')
       
       // 初期位置を画面中央に設定
       originX = window.innerWidth / 2 - canvas.width / 2
