@@ -1,5 +1,6 @@
 import { GradingResult as GradingResultType } from '../../services/api'
 import { SNSLinkRecord } from '../../utils/indexedDB'
+import AdSlot from '../ads/AdSlot'
 import './GradingResult.css'
 import * as SimpleIcons from 'simple-icons'
 
@@ -63,6 +64,9 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
         </div>
 
         <div className="result-content">
+          {/* 広告: 上部バナー */}
+          <AdSlot slot="result-top" />
+
           {result.problems && result.problems.length > 0 ? (
             <div className="problems-list">
               {result.problems.map((problem, index) => (
@@ -127,6 +131,9 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
               <p>{result.overallComment}</p>
             </div>
           )}
+
+          {/* 広告: 下部レクタングル */}
+          <AdSlot slot="result-bottom" />
         </div>
 
         {snsLinks.length > 0 && (

@@ -5,6 +5,7 @@ import GradingHistory from '../grading/GradingHistory';
 import { usePDFRecords } from '../../hooks/admin/usePDFRecords';
 import { useSNSLinks } from '../../hooks/admin/useSNSLinks';
 import { useStorage } from '../../hooks/admin/useStorage';
+import AdSlot from '../ads/AdSlot';
 import './AdminPanel.css';
 import { PREDEFINED_SNS, getSNSIcon } from '../../constants/sns';
 
@@ -486,6 +487,9 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                     : 'Install this app or use it regularly to protect your data.'}
               </div>
             </div>
+
+            {/* 広告: サイドバー */}
+            <AdSlot slot="admin-sidebar" />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
               <button
