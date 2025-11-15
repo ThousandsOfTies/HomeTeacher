@@ -212,10 +212,18 @@
         const ratio = currentDistance / initialDistance
         scale = Math.max(0.5, Math.min(5.0, initialScale * ratio))
         
-        // ピンチ中心からのオフセット計算
+        // 現在の指の中心位置（ビューポート座標）
+        const currentPinchCenterX = (t1.clientX + t2.clientX) / 2
+        const currentPinchCenterY = (t1.clientY + t2.clientY) / 2
+        
+        // ピンチ開始時の指の中心からのオフセット計算
         // 公式: newOrigin = pinchCenter - (pinchCenter - initialOrigin) * (newScale / initialScale)
         originX = pinchCenterX - (pinchCenterX - initialOriginX) * (scale / initialScale)
         originY = pinchCenterY - (pinchCenterY - initialOriginY) * (scale / initialScale)
+        
+        // 指の移動によるパン
+        originX += currentPinchCenterX - pinchCenterX
+        originY += currentPinchCenterY - pinchCenterY
         
         applyTransform()
       }
@@ -231,6 +239,29 @@
         initialOriginY = null
         pinchCenterX = null
         pinchCenterY = null
+      }
+    }, { passive: false })
+
+    // マウスホイールでのズーム（Ctrl+ホイール）
+    viewport.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        
+        // マウス位置（ビューポート座標）
+        const mouseX = e.clientX
+        const mouseY = e.clientY
+        
+        // ズーム量
+        const delta = -e.deltaY * 0.002
+        const oldScale = scale
+        scale = Math.max(0.5, Math.min(5.0, scale * (1 + delta)))
+        
+        // マウス位置を中心にズーム
+        // 公式: newOrigin = mousePos - (mousePos - oldOrigin) * (newScale / oldScale)
+        originX = mouseX - (mouseX - originX) * (scale / oldScale)
+        originY = mouseY - (mouseY - originY) * (scale / oldScale)
+        
+        applyTransform()
       }
     }, { passive: false })
 
