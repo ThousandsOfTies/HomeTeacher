@@ -693,14 +693,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   /**
    * ピンチズーム用の状態管理
    *
-   * Google Maps方式のピンチズームを実現するため、2本指タッチの前回値を保持
-   * - prevPinchDistance: 前回の2点間の距離（ズーム倍率の計算に使用）
-   * - prevPinchCenter: 前回の2点の中心座標（2本指パンの計算に使用）
+   * useRefを使用して再レンダリングを最小化
+   * - 頻繁なtouchmoveイベント中にDOM再構成が発生すると、イベントが途切れる問題を回避
    */
-  const [prevPinchDistance, setPrevPinchDistance] = useState<number | null>(null)
-  const [prevPinchCenter, setPrevPinchCenter] = useState<{ x: number; y: number } | null>(null)
-  const [prevTouch1, setPrevTouch1] = useState<{ x: number; y: number } | null>(null)
-  const [prevTouch2, setPrevTouch2] = useState<{ x: number; y: number } | null>(null)
+  const prevPinchDistanceRef = useRef<number | null>(null)
+  const prevPinchCenterRef = useRef<{ x: number; y: number } | null>(null)
+  const prevTouch1Ref = useRef<{ x: number; y: number } | null>(null)
+  const prevTouch2Ref = useRef<{ x: number; y: number } | null>(null)
 
   /**
    * 2本指タッチ開始ハンドラ（ピンチズーム・2本指パン用）
@@ -728,31 +727,26 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         const touch2X = touch2.clientX - containerRect.left
         const touch2Y = touch2.clientY - containerRect.top
         
-        setPrevTouch1({ x: touch1X, y: touch1Y })
-        setPrevTouch2({ x: touch2X, y: touch2Y })
+        prevTouch1Ref.current = { x: touch1X, y: touch1Y }
+        prevTouch2Ref.current = { x: touch2X, y: touch2Y }
         
         // 初期中心は単純な中点
         const centerX = (touch1X + touch2X) / 2
         const centerY = (touch1Y + touch2Y) / 2
-        setPrevPinchCenter({ x: centerX, y: centerY })
+        prevPinchCenterRef.current = { x: centerX, y: centerY }
       }
 
-      setPrevPinchDistance(distance)
+      prevPinchDistanceRef.current = distance
     }
   }
 
   /**
    * 2本指タッチ移動ハンドラ（Google Maps方式のピンチズーム + 2本指パン）
-   *
-   * アルゴリズム:
-   * 1. 前回と今回の2点間距離の比率を計算 → ズーム倍率の変化量
-   * 2. 指の中心が指しているコンテンツ座標を計算
-   * 3. ズーム後も同じコンテンツ座標が指の中心に来るようにオフセットを調整
-   * 4. 2点の中心座標の移動 → 2本指パン
+   * useRefで状態管理してDOM再構成を最小化
    */
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 2 || prevPinchDistance === null || prevPinchCenter === null || 
-        !containerRef.current || !prevTouch1 || !prevTouch2) {
+    if (e.touches.length !== 2 || prevPinchDistanceRef.current === null || prevPinchCenterRef.current === null || 
+        !containerRef.current || !prevTouch1Ref.current || !prevTouch2Ref.current) {
       return
     }
 
@@ -772,19 +766,11 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     const touch2X = touch2.clientX - containerRect.left
     const touch2Y = touch2.clientY - containerRect.top
 
-    console.log('👆 ピンチズーム:', {
-      touch1: { clientX: touch1.clientX, clientY: touch1.clientY },
-      touch2: { clientX: touch2.clientX, clientY: touch2.clientY },
-      containerRect: { left: containerRect.left, top: containerRect.top },
-      touch1XY: { x: touch1X, y: touch1Y },
-      touch2XY: { x: touch2X, y: touch2Y }
-    })
-
     // 各指の移動量を計算
-    const move1X = touch1X - prevTouch1.x
-    const move1Y = touch1Y - prevTouch1.y
-    const move2X = touch2X - prevTouch2.x
-    const move2Y = touch2Y - prevTouch2.y
+    const move1X = touch1X - prevTouch1Ref.current.x
+    const move1Y = touch1Y - prevTouch1Ref.current.y
+    const move2X = touch2X - prevTouch2Ref.current.x
+    const move2Y = touch2Y - prevTouch2Ref.current.y
     
     const distance1 = Math.sqrt(move1X * move1X + move1Y * move1Y)
     const distance2 = Math.sqrt(move2X * move2X + move2Y * move2Y)
@@ -793,81 +779,64 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     const totalMove = distance1 + distance2
     
     // 中心位置を移動量の比率で計算
-    // 例: touch1が動かず、touch2だけ動く場合、touch1が中心(ratio=0)
     let currentCenterX: number
     let currentCenterY: number
     
     if (totalMove < 0.1) {
-      // ほぼ動いていない場合は中点
       currentCenterX = (touch1X + touch2X) / 2
       currentCenterY = (touch1Y + touch2Y) / 2
     } else {
-      // touch2の移動量が大きいほど、touch1寄りの中心になる
       const ratio = distance2 / totalMove
       currentCenterX = touch1X * ratio + touch2X * (1 - ratio)
       currentCenterY = touch1Y * ratio + touch2Y * (1 - ratio)
     }
 
-    // デバッグマーカーを更新
-    setDebugMarkers([
-      { x: touch1X, y: touch1Y, label: '1', color: 'blue' },
-      { x: touch2X, y: touch2Y, label: '2', color: 'blue' },
-      { x: currentCenterX, y: currentCenterY, label: '中心', color: 'red' },
-      { x: (touch1X + touch2X) / 2, y: (touch1Y + touch2Y) / 2, label: '中点', color: 'orange' }
-    ])
-
-    // ピンチズーム処理（距離の変化が1%以上の場合のみ実行）
-    const distanceRatio = currentDistance / prevPinchDistance
-    const ZOOM_THRESHOLD = 0.01 // 1%
+    // ピンチズーム処理
+    const distanceRatio = currentDistance / prevPinchDistanceRef.current
+    const ZOOM_THRESHOLD = 0.01
+    
     if (Math.abs(distanceRatio - 1) > ZOOM_THRESHOLD) {
       const oldZoom = zoom
       const newZoom = Math.max(0.5, Math.min(5, oldZoom * distanceRatio))
 
-      // Google Maps方式: 指の中心がズーム後も同じコンテンツ位置を指すように調整
-      // ズーム前の指の中心が指しているコンテンツ上の座標を計算
-      // コンテンツ座標 = (ビューポート座標 - パンオフセット) / スケール
       const contentX = (currentCenterX - panOffset.x) / oldZoom
       const contentY = (currentCenterY - panOffset.y) / oldZoom
 
-      // ズーム後も同じコンテンツ座標が指の中心に来るようにパンオフセットを調整
-      // ビューポート座標 = パンオフセット + コンテンツ座標 * 新スケール
-      // => パンオフセット = ビューポート座標 - コンテンツ座標 * 新スケール
       const newOffsetX = currentCenterX - contentX * newZoom
       const newOffsetY = currentCenterY - contentY * newZoom
 
       setPanOffset({ x: newOffsetX, y: newOffsetY })
       setZoom(newZoom)
-      setPrevPinchDistance(currentDistance)
+      prevPinchDistanceRef.current = currentDistance
     }
 
-    // 前回の指位置を更新
-    setPrevTouch1({ x: touch1X, y: touch1Y })
-    setPrevTouch2({ x: touch2X, y: touch2Y })
-
-    // 2本指パン処理（中心の移動が1px以上の場合のみ実行）
-    const centerDx = currentCenterX - prevPinchCenter.x
-    const centerDy = currentCenterY - prevPinchCenter.y
-    const PAN_THRESHOLD = 1 // 1px
+    // 2本指パン処理
+    const centerDx = currentCenterX - prevPinchCenterRef.current.x
+    const centerDy = currentCenterY - prevPinchCenterRef.current.y
+    const PAN_THRESHOLD = 1
+    
     if (Math.abs(centerDx) > PAN_THRESHOLD || Math.abs(centerDy) > PAN_THRESHOLD) {
       setPanOffset(prev => ({
         x: prev.x + centerDx,
         y: prev.y + centerDy
       }))
-      setPrevPinchCenter({ x: currentCenterX, y: currentCenterY })
     }
+
+    // 前回値を更新（毎回更新して累積誤差を防ぐ）
+    prevTouch1Ref.current = { x: touch1X, y: touch1Y }
+    prevTouch2Ref.current = { x: touch2X, y: touch2Y }
+    prevPinchCenterRef.current = { x: currentCenterX, y: currentCenterY }
   }
 
   /**
    * 2本指タッチ終了ハンドラ
-   *
-   * 2本指タッチが終了したら、保持していた前回値をクリアする
    */
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length < 2) {
-      setPrevPinchDistance(null)
-      setPrevPinchCenter(null)
-      setPrevTouch1(null)
-      setPrevTouch2(null)
+      prevPinchDistanceRef.current = null
+      prevPinchCenterRef.current = null
+      prevTouch1Ref.current = null
+      prevTouch2Ref.current = null
       setDebugMarkers([])
     }
   }

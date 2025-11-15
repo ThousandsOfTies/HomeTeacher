@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Transform Scale ピンチズーム - iPad</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      background: #e0e0e0;
+      overflow: auto;
+      position: relative;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      touch-action: none;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      width: 600px;
+      height: 800px;
+    }
+
+    .canvas-pan-layer {
+      position: relative;
+      transform-origin: 0 0;
+      transition: none;
+    }
+
+    /* transform: scale()を使う層 */
+    .canvas-scale-layer {
+      position: relative;
+      transform-origin: 0 0;
+      transition: none;
+    }
+
+    .fake-canvas {
+      display: block;
+      width: 600px;
+      height: 800px;
+      background: white;
+      border: 2px solid #333;
+      position: relative;
+    }
+
+    .fake-canvas::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(0deg, #ddd 1px, transparent 1px),
+        linear-gradient(90deg, #ddd 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .center-marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .debug-panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      z-index: 1000;
+      max-width: 250px;
+    }
+
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 3px 0;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .debug-label {
+      color: #aaa;
+      margin-right: 10px;
+    }
+
+    .debug-value {
+      color: #0f0;
+      font-weight: bold;
+    }
+
+    .touch-marker {
+      position: fixed;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      display: none;
+      z-index: 999;
+    }
+
+    .marker-1 { background: rgba(255, 0, 0, 0.5); border: 2px solid red; }
+    .marker-2 { background: rgba(0, 0, 255, 0.5); border: 2px solid blue; }
+    .marker-center { background: rgba(0, 255, 0, 0.5); border: 2px solid lime; }
+
+    .method-label {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 100, 0, 0.9);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="method-label">Transform Scale方式</div>
+
+  <div class="debug-panel">
+    <div style="font-weight: bold; margin-bottom: 8px; color: #FFD700;">🔍 Transform Scale方式</div>
+    <div class="debug-row">
+      <span class="debug-label">Zoom:</span>
+      <span class="debug-value" id="zoomValue">1.00</span>
+    </div>
+    <div class="debug-row">
+      <span class="debug-label">Pan X:</span>
+      <span class="debug-value" id="panXValue">0</span>
+    </div>
+    <div class="debug-row">
+      <span class="debug-label">Pan Y:</span>
+      <span class="debug-value" id="panYValue">0</span>
+    </div>
+    <div class="debug-row">
+      <span class="debug-label">Touch:</span>
+      <span class="debug-value" id="touchCount">0</span>
+    </div>
+    <div class="debug-row">
+      <span class="debug-label">Distance:</span>
+      <span class="debug-value" id="distanceValue">-</span>
+    </div>
+    <div class="debug-row">
+      <span class="debug-label">Center X:</span>
+      <span class="debug-value" id="centerXValue">-</span>
+    </div>
+    <div class="debug-row">
+      <span class="debug-label">Center Y:</span>
+      <span class="debug-value" id="centerYValue">-</span>
+    </div>
+  </div>
+
+  <div class="container" id="container">
+    <div class="canvas-wrapper" id="wrapper">
+      <div class="canvas-pan-layer" id="panLayer">
+        <div class="canvas-scale-layer" id="scaleLayer">
+          <div class="fake-canvas">
+            <div class="center-marker">📄</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="touch-marker marker-1" id="marker1"></div>
+  <div class="touch-marker marker-2" id="marker2"></div>
+  <div class="touch-marker marker-center" id="markerCenter"></div>
+
+  <script>
+    const container = document.getElementById('container')
+    const wrapper = document.getElementById('wrapper')
+    const panLayer = document.getElementById('panLayer')
+    const scaleLayer = document.getElementById('scaleLayer')
+    const fakeCanvas = document.querySelector('.fake-canvas')
+    const marker1 = document.getElementById('marker1')
+    const marker2 = document.getElementById('marker2')
+    const markerCenter = document.getElementById('markerCenter')
+
+    const BASE_WIDTH = 600
+    const BASE_HEIGHT = 800
+
+    let zoom = 1.0
+    let panOffset = { x: 0, y: 0 }
+    let prevPinchDistance = null
+    let prevPinchCenter = null
+    let prevTouch1 = null
+    let prevTouch2 = null
+
+    function updateDebug() {
+      document.getElementById('zoomValue').textContent = zoom.toFixed(2)
+      document.getElementById('panXValue').textContent = Math.round(panOffset.x)
+      document.getElementById('panYValue').textContent = Math.round(panOffset.y)
+    }
+
+    function applyTransform() {
+      panLayer.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`
+      scaleLayer.style.transform = `scale(${zoom})`
+      updateDebug()
+    }
+
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+
+        const dx = touch1.clientX - touch2.clientX
+        const dy = touch1.clientY - touch2.clientY
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        const containerRect = container.getBoundingClientRect()
+        const touch1X = touch1.clientX - containerRect.left
+        const touch1Y = touch1.clientY - containerRect.top
+        const touch2X = touch2.clientX - containerRect.left
+        const touch2Y = touch2.clientY - containerRect.top
+
+        prevTouch1 = { x: touch1X, y: touch1Y }
+        prevTouch2 = { x: touch2X, y: touch2Y }
+
+        const centerX = (touch1X + touch2X) / 2
+        const centerY = (touch1Y + touch2Y) / 2
+        prevPinchCenter = { x: centerX, y: centerY }
+        prevPinchDistance = distance
+
+        marker1.style.display = 'block'
+        marker2.style.display = 'block'
+        markerCenter.style.display = 'block'
+        marker1.style.left = touch1.clientX + 'px'
+        marker1.style.top = touch1.clientY + 'px'
+        marker2.style.left = touch2.clientX + 'px'
+        marker2.style.top = touch2.clientY + 'px'
+        markerCenter.style.left = (containerRect.left + centerX) + 'px'
+        markerCenter.style.top = (containerRect.top + centerY) + 'px'
+
+        document.getElementById('touchCount').textContent = '2'
+        document.getElementById('distanceValue').textContent = Math.round(distance) + 'px'
+        document.getElementById('centerXValue').textContent = Math.round(centerX)
+        document.getElementById('centerYValue').textContent = Math.round(centerY)
+      }
+    }, { passive: false })
+
+    container.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 2 || prevPinchDistance === null || prevPinchCenter === null ||
+          !prevTouch1 || !prevTouch2) {
+        return
+      }
+
+      e.preventDefault()
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      
+      const containerRect = container.getBoundingClientRect()
+
+      const dx = touch1.clientX - touch2.clientX
+      const dy = touch1.clientY - touch2.clientY
+      const currentDistance = Math.sqrt(dx * dx + dy * dy)
+
+      const touch1X = touch1.clientX - containerRect.left
+      const touch1Y = touch1.clientY - containerRect.top
+      const touch2X = touch2.clientX - containerRect.left
+      const touch2Y = touch2.clientY - containerRect.top
+
+      const move1X = touch1X - prevTouch1.x
+      const move1Y = touch1Y - prevTouch1.y
+      const move2X = touch2X - prevTouch2.x
+      const move2Y = touch2Y - prevTouch2.y
+      
+      const distance1 = Math.sqrt(move1X * move1X + move1Y * move1Y)
+      const distance2 = Math.sqrt(move2X * move2X + move2Y * move2Y)
+
+      const totalDistance = distance1 + distance2
+      const weight1 = totalDistance > 0 ? distance1 / totalDistance : 0.5
+      const weight2 = totalDistance > 0 ? distance2 / totalDistance : 0.5
+
+      const centerX = touch1X * weight2 + touch2X * weight1
+      const centerY = touch1Y * weight2 + touch2Y * weight1
+
+      const centerMoveX = centerX - prevPinchCenter.x
+      const centerMoveY = centerY - prevPinchCenter.y
+
+      panOffset.x += centerMoveX
+      panOffset.y += centerMoveY
+
+      const oldZoom = zoom
+      const scale = currentDistance / prevPinchDistance
+      zoom = Math.max(0.5, Math.min(5.0, zoom * scale))
+
+      const zoomChange = zoom / oldZoom
+      panOffset.x = panOffset.x * zoomChange
+      panOffset.y = panOffset.y * zoomChange
+
+      applyTransform()
+
+      prevTouch1 = { x: touch1X, y: touch1Y }
+      prevTouch2 = { x: touch2X, y: touch2Y }
+      prevPinchCenter = { x: centerX, y: centerY }
+      prevPinchDistance = currentDistance
+
+      marker1.style.left = touch1.clientX + 'px'
+      marker1.style.top = touch1.clientY + 'px'
+      marker2.style.left = touch2.clientX + 'px'
+      marker2.style.top = touch2.clientY + 'px'
+      markerCenter.style.left = (containerRect.left + centerX) + 'px'
+      markerCenter.style.top = (containerRect.top + centerY) + 'px'
+
+      document.getElementById('distanceValue').textContent = Math.round(currentDistance) + 'px'
+      document.getElementById('centerXValue').textContent = Math.round(centerX)
+      document.getElementById('centerYValue').textContent = Math.round(centerY)
+    }, { passive: false })
+
+    container.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        prevPinchDistance = null
+        prevPinchCenter = null
+        prevTouch1 = null
+        prevTouch2 = null
+        marker1.style.display = 'none'
+        marker2.style.display = 'none'
+        markerCenter.style.display = 'none'
+        document.getElementById('touchCount').textContent = e.touches.length
+        document.getElementById('distanceValue').textContent = '-'
+        document.getElementById('centerXValue').textContent = '-'
+        document.getElementById('centerYValue').textContent = '-'
+      }
+    }, { passive: false })
+
+    applyTransform()
+    console.log('✅ Transform Scale方式 ピンチズームテスト準備完了')
+    console.log('📱 iPadで2本指ピンチズームしてください')
+  </script>
+</body>
+</html>

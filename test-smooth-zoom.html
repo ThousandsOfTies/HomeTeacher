@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スムーズズームテスト - 最小構造</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    /* 方式1: transform: scale のみ（最もシンプル） */
+    .test-container-1 {
+      width: 100vw;
+      height: 50vh;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 2px solid #333;
+      overflow: auto;
+      position: relative;
+    }
+
+    .content-1 {
+      width: 400px;
+      height: 300px;
+      background: white;
+      border: 2px solid red;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      transform-origin: center center;
+      transition: transform 0.1s ease-out;
+    }
+
+    /* 方式2: width/height変更 */
+    .test-container-2 {
+      width: 100vw;
+      height: 50vh;
+      background: #e0f0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      position: relative;
+    }
+
+    .content-2 {
+      width: 400px;
+      height: 300px;
+      background: white;
+      border: 2px solid blue;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      /* transition削除 - 即座に変更してガクガク防止 */
+    }
+
+    .info-panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 1000;
+    }
+
+    .label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- 情報パネル -->
+  <div class="info-panel">
+    <div><strong>Ctrl + マウスホイール</strong>でズーム</div>
+    <div style="margin-top: 10px;">
+      <div>方式1 Scale: <span id="scale1">1.00</span></div>
+      <div>方式2 Size: <span id="scale2">1.00</span></div>
+    </div>
+    <div style="margin-top: 10px; color: #FFD700;">
+      どちらがスムーズですか？
+    </div>
+  </div>
+
+  <!-- 方式1: transform scale -->
+  <div class="test-container-1" id="container1">
+    <div class="label">方式1: transform: scale()</div>
+    <div class="content-1" id="content1">
+      Transform Scale<br>
+      <span style="font-size: 16px;">最もシンプル</span>
+    </div>
+  </div>
+
+  <!-- 方式2: width/height変更 -->
+  <div class="test-container-2" id="container2">
+    <div class="label">方式2: width/height変更</div>
+    <div class="content-2" id="content2">
+      <div id="text2">
+        Element Resize<br>
+        <span style="font-size: 16px;" id="subtext2">HomeTeacher方式</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let scale1 = 1.0
+    let scale2 = 1.0
+    const BASE_WIDTH = 400
+    const BASE_HEIGHT = 300
+    const BASE_FONT_SIZE = 24
+    const BASE_SUB_FONT_SIZE = 16
+    const BASE_BORDER_WIDTH = 2
+
+    const content1 = document.getElementById('content1')
+    const content2 = document.getElementById('content2')
+    const text2 = document.getElementById('text2')
+    const subtext2 = document.getElementById('subtext2')
+    const container1 = document.getElementById('container1')
+    const container2 = document.getElementById('container2')
+
+    function updateDisplay() {
+      document.getElementById('scale1').textContent = scale1.toFixed(2)
+      document.getElementById('scale2').textContent = scale2.toFixed(2)
+    }
+
+    // 方式1: transform scale
+    container1.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const delta = -e.deltaY * 0.002
+        scale1 = Math.max(0.5, Math.min(3, scale1 * (1 + delta)))
+        content1.style.transform = `scale(${scale1})`
+        updateDisplay()
+      }
+    }, { passive: false })
+
+    // 方式2: width/height変更（文字サイズも変更して同じ見た目に）
+    container2.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const delta = -e.deltaY * 0.002
+        scale2 = Math.max(0.5, Math.min(3, scale2 * (1 + delta)))
+        content2.style.width = (BASE_WIDTH * scale2) + 'px'
+        content2.style.height = (BASE_HEIGHT * scale2) + 'px'
+        content2.style.fontSize = (BASE_FONT_SIZE * scale2) + 'px'
+        content2.style.borderWidth = (BASE_BORDER_WIDTH * scale2) + 'px'
+        subtext2.style.fontSize = (BASE_SUB_FONT_SIZE * scale2) + 'px'
+        updateDisplay()
+      }
+    }, { passive: false })
+
+    console.log('✅ スムーズズームテスト準備完了')
+    console.log('🖱️ Ctrl + マウスホイールでズームしてください')
+    console.log('📊 上下どちらがスムーズか比較してください')
+  </script>
+</body>
+</html>
