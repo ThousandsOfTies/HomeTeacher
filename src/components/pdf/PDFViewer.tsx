@@ -26,6 +26,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const selectionCanvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)  // canvas-container
   const wrapperRef = useRef<HTMLDivElement>(null)      // canvas-wrapper
+  const layerRef = useRef<HTMLDivElement>(null)        // canvas-layer
 
   // ステータスバー用のメッセージ
   const [statusMessages, setStatusMessages] = useState<string[]>([])

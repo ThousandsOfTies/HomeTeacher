@@ -124,34 +124,64 @@
     const canvas = document.getElementById('canvas')
     const ctx = canvas.getContext('2d')
 
-    // サンプルPDFを生成（シンプルな1ページPDF）
+    // サンプルPDFを生成（canvas上に直接描画）
     async function createSamplePDF() {
-      // Base64エンコードされたシンプルなPDFデータ
-      const pdfData = atob(
-        'JVBERi0xLjQKJeLjz9MKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCjw8L0xlbmd0aCAzOD4+CnN0cmVhbQpCVAovRjEgNDggVGYKMTAwIDcwMCBUZApUSGVsbG8gUERGIQpFVAplbmRzdHJlYW0KZW5kb2JqCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDIgMCBSPj4KZW5kb2JqCjIgMCBvYmoKPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjUgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDE3NCAwMDAwMCBuIAowMDAwMDAwMjIzIDAwMDAwIG4gCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA5NCAwMDAwMCBuIAowMDAwMDAwMjgwIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMzU3CiUlRU9GCg=='
-      )
+      // Canvas size設定
+      canvas.width = 600
+      canvas.height = 800
       
-      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData.split('').map(c => c.charCodeAt(0))) })
-      const pdf = await loadingTask.promise
-      const page = await pdf.getPage(1)
+      // 白背景
+      ctx.fillStyle = 'white'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
       
-      // PDFページのサイズを取得
-      const originalViewport = page.getViewport({ scale: 1.0 })
+      // タイトル
+      ctx.fillStyle = 'black'
+      ctx.font = 'bold 32px sans-serif'
+      ctx.fillText('数学ドリル', 50, 60)
       
-      // Canvas ize設定
-      const scale = 2.0 // 高解像度表示
-      const pdfViewport = page.getViewport({ scale })
+      // 問題1
+      ctx.font = '24px sans-serif'
+      ctx.fillText('問題1: 次の計算をしなさい', 50, 120)
+      ctx.font = '32px serif'
+      ctx.fillText('12 + 34 = ?', 80, 180)
       
-      canvas.width = pdfViewport.width
-      canvas.height = pdfViewport.height
+      // 問題2
+      ctx.font = '24px sans-serif'
+      ctx.fillText('問題2: 次の式を解きなさい', 50, 280)
+      ctx.font = '32px serif'
+      ctx.fillText('x + 5 = 13', 80, 340)
+      ctx.fillText('x = ?', 80, 390)
       
-      // PDFをレンダリング
-      await page.render({
-        canvasContext: ctx,
-        viewport: pdfViewport
-      }).promise
+      // 問題3
+      ctx.font = '24px sans-serif'
+      ctx.fillText('問題3: 円の面積を求めなさい', 50, 480)
+      ctx.font = '24px serif'
+      ctx.fillText('半径 r = 5 cm', 80, 530)
+      ctx.font = '32px serif'
+      ctx.fillText('面積 = ?', 80, 580)
       
-      console.log('✅ PDF loaded:', canvas.width, 'x', canvas.height)
+      // グリッド線（マス目）
+      ctx.strokeStyle = '#eee'
+      ctx.lineWidth = 1
+      for (let i = 0; i < canvas.width; i += 50) {
+        ctx.beginPath()
+        ctx.moveTo(i, 0)
+        ctx.lineTo(i, canvas.height)
+        ctx.stroke()
+      }
+      for (let i = 0; i < canvas.height; i += 50) {
+        ctx.beginPath()
+        ctx.moveTo(0, i)
+        ctx.lineTo(canvas.width, i)
+        ctx.stroke()
+      }
+      
+      // 枠線
+      ctx.strokeStyle = '#333'
+      ctx.lineWidth = 2
+      ctx.strokeRect(0, 0, canvas.width, canvas.height)
+      
+      console.log('✅ Sample PDF created:', canvas.width, 'x', canvas.height)
       
       // 初期位置を画面中央に設定
       originX = window.innerWidth / 2 - canvas.width / 2
@@ -276,24 +306,12 @@
       }
     }, { passive: false })
 
-    // PDFを読み込んで表示
+    // サンプルPDFを表示
     createSamplePDF().catch(err => {
-      console.error('PDF load error:', err)
-      // フォールバック: 空のcanvasを表示
-      canvas.width = 600
-      canvas.height = 800
-      ctx.fillStyle = 'white'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      ctx.fillStyle = 'black'
-      ctx.font = '24px sans-serif'
-      ctx.fillText('Sample PDF', 50, 100)
-      
-      originX = window.innerWidth / 2 - canvas.width / 2
-      originY = window.innerHeight / 2 - canvas.height / 2
-      applyTransform()
+      console.error('Canvas draw error:', err)
     })
     
-    console.log('✅ 正しい基本構造のピンチズーム + PDF')
+    console.log('✅ 正しい基本構造のピンチズーム + サンプル問題')
     console.log('📐 transform-origin: 0 0')
     console.log('📱 touchstartで初期値保存 → touchmoveで初期値から計算')
   </script>
