@@ -73,17 +73,17 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
                   }`}
                 >
                   <div className="problem-header">
+                    <span className="result-icon">
+                      {problem.isCorrect ? '⭕' : '❌'}
+                    </span>
                     <h3>
                       {problem.problemNumber || `問題 ${index + 1}`}
                     </h3>
-                    <span className="result-badge">
-                      {problem.isCorrect ? '✓ 正解' : '✗ 不正解'}
-                    </span>
                   </div>
 
                   {problem.problemText && (
                     <div className="problem-text">
-                      <strong>問題:</strong> {problem.problemText}
+                      {problem.problemText}
                     </div>
                   )}
 
