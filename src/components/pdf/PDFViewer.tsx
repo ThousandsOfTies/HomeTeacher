@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import { gradeWork, GradingResult as GradingResultType } from '../../services/api'
 import GradingResult from '../grading/GradingResult'
-import { savePDFRecord, getPDFRecord, getAllSNSLinks, SNSLinkRecord, PDFFileRecord, saveGradingHistory, generateGradingHistoryId } from '../../utils/indexedDB'
+import { savePDFRecord, getPDFRecord, getAllSNSLinks, SNSLinkRecord, PDFFileRecord, saveGradingHistory, generateGradingHistoryId, getAppSettings } from '../../utils/indexedDB'
 import { ICON_SVG } from '../../constants/icons'
 import { usePDFRenderer } from '../../hooks/pdf/usePDFRenderer'
 import { useDrawing, DrawingPath } from '../../hooks/pdf/useDrawing'
@@ -127,18 +127,21 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   // SNSリンク
   const [snsLinks, setSnsLinks] = useState<SNSLinkRecord[]>([])
+  const [snsTimeLimit, setSnsTimeLimit] = useState<number>(30) // デフォルト30分
 
-  // SNSリンクを読み込む
+  // SNSリンクと設定を読み込む
   useEffect(() => {
-    const loadSNSLinks = async () => {
+    const loadSNSData = async () => {
       try {
         const links = await getAllSNSLinks()
         setSnsLinks(links)
+        const settings = await getAppSettings()
+        setSnsTimeLimit(settings.snsTimeLimitMinutes)
       } catch (error) {
-        console.error('Failed to load SNS links:', error)
+        console.error('Failed to load SNS data:', error)
       }
     }
-    loadSNSLinks()
+    loadSNSData()
   }, [])
 
   // アンドゥ・リドゥ用の履歴（ページごと）
@@ -180,6 +183,27 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     return () => clearTimeout(timer)
   }, [drawingPaths, pdfId])
 
+  // ページ番号が変更されたら保存
+  useEffect(() => {
+    if (!pdfId) return
+
+    const savePageNumber = async () => {
+      try {
+        const record = await getPDFRecord(pdfId)
+        if (record) {
+          record.lastPageNumber = pageNum
+          record.lastOpened = Date.now()
+          await savePDFRecord(record)
+          console.log(`💾 現在のページ番号 (${pageNum}) を保存しました`)
+        }
+      } catch (error) {
+        console.error('ページ番号の保存失敗:', error)
+      }
+    }
+
+    savePageNumber()
+  }, [pageNum, pdfId])
+
   // ポップアップの外側クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -211,13 +235,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             restoredMap.set(pageNum, paths)
           })
           setDrawingPaths(restoredMap)
-          addStatusMessage(`✅ ペン跡を復元しました (${restoredMap.size}ページ)`)
+          console.log(`✅ ペン跡を復元しました (${restoredMap.size}ページ)`)
         } else {
-          addStatusMessage('📄 PDFを読み込みました')
+          console.log('📄 PDFを読み込みました')
         }
       } catch (error) {
         console.error('ペン跡の復元に失敗:', error)
-        addStatusMessage('📄 PDFを読み込みました')
+        console.log('📄 PDFを読み込みました')
       }
     }
 
@@ -239,7 +263,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         renderTaskRef.current = null
       }
 
-      console.log(`🔄 レンダリング開始: ページ${pageNum}, スケール=${scale}, 初回=${isInitialDrawLoad}`)
+      console.log(`🔄 レンダリング開始: ページ${pageNum}, スケール=${scale.toFixed(2)}`)
 
       const page = await pdfDoc.getPage(pageNum)
 
@@ -403,10 +427,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     if (isEraserMode) {
       hookStartErasing()
       hookEraseAtPosition(canvas, x, y)
-      addStatusMessage(`✏️ 消しゴム開始: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
     } else if (isDrawingMode) {
       hookStartDrawing(canvas, x, y, penColor, penSize)
-      addStatusMessage('✏️ タッチ描画開始')
     }
   }
 
@@ -424,7 +446,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
     if (isEraserMode && isErasing) {
       hookEraseAtPosition(canvas, x, y)
-      addStatusMessage(`✏️ 消しゴム移動: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
     } else if (isDrawingMode && isCurrentlyDrawing) {
       hookContinueDrawing(canvas, x, y)
     }
@@ -436,7 +457,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         hookStopErasing((newPaths) => {
           saveToHistory(newPaths)
         })
-        addStatusMessage('✏️ 消しゴム終了')
       } else if (isDrawingMode && isCurrentlyDrawing) {
         stopDrawing()
       }
@@ -482,99 +502,120 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }, [pageNum, drawingPaths, addStatusMessage])
 
-  // タッチ操作用の状態
-  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null)
-  const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null)
+  /**
+   * ピンチズーム用の状態管理
+   *
+   * Google Maps方式のピンチズームを実現するため、2本指タッチの前回値を保持
+   * - prevPinchDistance: 前回の2点間の距離（ズーム倍率の計算に使用）
+   * - prevPinchCenter: 前回の2点の中心座標（2本指パンの計算に使用）
+   */
+  const [prevPinchDistance, setPrevPinchDistance] = useState<number | null>(null)
+  const [prevPinchCenter, setPrevPinchCenter] = useState<{ x: number; y: number } | null>(null)
 
-  // 2点間の距離を計算
-  const getTouchDistance = (touch1: React.Touch, touch2: React.Touch) => {
-    const dx = touch1.clientX - touch2.clientX
-    const dy = touch1.clientY - touch2.clientY
-    return Math.sqrt(dx * dx + dy * dy)
-  }
-
-  // 2点の中心座標を計算
-  const getTouchCenter = (touch1: React.Touch, touch2: React.Touch) => {
-    return {
-      x: (touch1.clientX + touch2.clientX) / 2,
-      y: (touch1.clientY + touch2.clientY) / 2
-    }
-  }
-
-  // タッチ開始
+  /**
+   * 2本指タッチ開始ハンドラ（ピンチズーム・2本指パン用）
+   *
+   * 2本指タッチが開始されたときに、初期状態を記録する
+   * - 2点間の距離（ピンチズームの基準値）
+   * - 2点の中心座標（2本指パンの基準値）
+   */
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 2) {
-      // 2本指タッチ - ピンチ・パン用
       e.preventDefault()
-      const distance = getTouchDistance(e.touches[0], e.touches[1])
-      const center = getTouchCenter(e.touches[0], e.touches[1])
-      setLastTouchDistance(distance)
-      setLastTouchCenter(center)
-      addStatusMessage(`🔍 ピンチ開始: 中心(${center.x.toFixed(0)}, ${center.y.toFixed(0)})`)
-    }
-  }
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
 
-  // タッチ移動
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 2 && lastTouchDistance !== null && lastTouchCenter !== null) {
-      e.preventDefault()
+      // 2点間の距離を計算（ピタゴラスの定理）
+      const dx = touch1.clientX - touch2.clientX
+      const dy = touch1.clientY - touch2.clientY
+      const distance = Math.sqrt(dx * dx + dy * dy)
 
-      const currentDistance = getTouchDistance(e.touches[0], e.touches[1])
-      const currentCenter = getTouchCenter(e.touches[0], e.touches[1])
-
-      // ピンチイン・アウトでズーム（現在の指の中心を維持）
-      const distanceChange = currentDistance - lastTouchDistance
-      const centerDx = currentCenter.x - lastTouchCenter.x
-      const centerDy = currentCenter.y - lastTouchCenter.y
-
-      // ズーム処理（閾値を1に下げてより敏感に）
-      if (Math.abs(distanceChange) > 1) {
-        const scaleChange = distanceChange * 0.005
-        const oldScale = scale
-        const newScale = Math.max(0.5, Math.min(5, oldScale + scaleChange))
-
-        // ズーム中心を現在の指の中心にするため、パンオフセットを調整
-        if (containerRef.current) {
-          const containerRect = containerRef.current.getBoundingClientRect()
-
-          // 指の中心のコンテナ内での位置
-          const fingerX = currentCenter.x - containerRect.left
-          const fingerY = currentCenter.y - containerRect.top
-
-          // 現在のpanOffsetを考慮した、指が指しているコンテンツ座標
-          // ズーム後も同じコンテンツ座標がfingerX/Yに来るように調整
-          const scaleRatio = newScale / oldScale
-          const newPanOffsetX = fingerX - (fingerX - panOffset.x) * scaleRatio
-          const newPanOffsetY = fingerY - (fingerY - panOffset.y) * scaleRatio
-
-          setPanOffset({
-            x: newPanOffsetX,
-            y: newPanOffsetY
-          })
-
-          addStatusMessage(`🔍 old pan(${panOffset.x.toFixed(0)},${panOffset.y.toFixed(0)}) new pan(${newPanOffsetX.toFixed(0)},${newPanOffsetY.toFixed(0)}) ratio=${scaleRatio.toFixed(3)}`)
-        }
-
-        setScale(newScale)
-        setLastTouchDistance(currentDistance)
-        setLastTouchCenter(currentCenter) // ズーム後は中心位置も更新（パン計算の基準点として）
-      } else if (Math.abs(centerDx) > 1 || Math.abs(centerDy) > 1) {
-        // パン処理（2本指スワイプ）- ズームしていない時のみ
-        setPanOffset(prev => ({
-          x: prev.x + centerDx,
-          y: prev.y + centerDy
-        }))
-        setLastTouchCenter(currentCenter)
+      // 2点の中心座標を計算（コンテナ相対座標）
+      if (containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect()
+        const centerX = (touch1.clientX + touch2.clientX) / 2 - containerRect.left
+        const centerY = (touch1.clientY + touch2.clientY) / 2 - containerRect.top
+        setPrevPinchCenter({ x: centerX, y: centerY })
       }
+
+      setPrevPinchDistance(distance)
     }
   }
 
-  // タッチ終了
+  /**
+   * 2本指タッチ移動ハンドラ（Google Maps方式のピンチズーム + 2本指パン）
+   *
+   * アルゴリズム:
+   * 1. 前回と今回の2点間距離の比率を計算 → ズーム倍率の変化量
+   * 2. 指の中心が指しているコンテンツ座標を計算
+   * 3. ズーム後も同じコンテンツ座標が指の中心に来るようにオフセットを調整
+   * 4. 2点の中心座標の移動 → 2本指パン
+   */
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 2 || prevPinchDistance === null || prevPinchCenter === null || !containerRef.current) {
+      return
+    }
+
+    e.preventDefault()
+    const touch1 = e.touches[0]
+    const touch2 = e.touches[1]
+    const containerRect = containerRef.current.getBoundingClientRect()
+
+    // 現在の2点間の距離を計算
+    const dx = touch1.clientX - touch2.clientX
+    const dy = touch1.clientY - touch2.clientY
+    const currentDistance = Math.sqrt(dx * dx + dy * dy)
+
+    // 現在の2点の中心座標を計算（コンテナ相対座標）
+    const currentCenterX = (touch1.clientX + touch2.clientX) / 2 - containerRect.left
+    const currentCenterY = (touch1.clientY + touch2.clientY) / 2 - containerRect.top
+
+    // ピンチズーム処理（距離の変化が1%以上の場合のみ実行）
+    const distanceRatio = currentDistance / prevPinchDistance
+    const ZOOM_THRESHOLD = 0.01 // 1%
+    if (Math.abs(distanceRatio - 1) > ZOOM_THRESHOLD) {
+      const oldScale = scale
+      const newScale = Math.max(0.5, Math.min(5, oldScale * distanceRatio))
+
+      // Google Maps方式: 指の中心がズーム後も同じコンテンツ位置を指すように調整
+      // ズーム前の指の中心が指しているコンテンツ上の座標を計算
+      // コンテンツ座標 = (ビューポート座標 - パンオフセット) / スケール
+      const contentX = (currentCenterX - panOffset.x) / oldScale
+      const contentY = (currentCenterY - panOffset.y) / oldScale
+
+      // ズーム後も同じコンテンツ座標が指の中心に来るようにパンオフセットを調整
+      // ビューポート座標 = パンオフセット + コンテンツ座標 * 新スケール
+      // => パンオフセット = ビューポート座標 - コンテンツ座標 * 新スケール
+      const newOffsetX = currentCenterX - contentX * newScale
+      const newOffsetY = currentCenterY - contentY * newScale
+
+      setPanOffset({ x: newOffsetX, y: newOffsetY })
+      setScale(newScale)
+      setPrevPinchDistance(currentDistance)
+    }
+
+    // 2本指パン処理（中心の移動が1px以上の場合のみ実行）
+    const centerDx = currentCenterX - prevPinchCenter.x
+    const centerDy = currentCenterY - prevPinchCenter.y
+    const PAN_THRESHOLD = 1 // 1px
+    if (Math.abs(centerDx) > PAN_THRESHOLD || Math.abs(centerDy) > PAN_THRESHOLD) {
+      setPanOffset(prev => ({
+        x: prev.x + centerDx,
+        y: prev.y + centerDy
+      }))
+      setPrevPinchCenter({ x: currentCenterX, y: currentCenterY })
+    }
+  }
+
+  /**
+   * 2本指タッチ終了ハンドラ
+   *
+   * 2本指タッチが終了したら、保持していた前回値をクリアする
+   */
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length < 2) {
-      setLastTouchDistance(null)
-      setLastTouchCenter(null)
-      console.log('2本指タッチ終了')
+      setPrevPinchDistance(null)
+      setPrevPinchCenter(null)
     }
   }
 
@@ -854,9 +895,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           return
         }
 
-        // 最大解像度を設定（大きすぎる画像は縮小）
-        const maxWidth = 1024
-        const maxHeight = 1024
+        // 最大解像度を設定（大きすぎる画像は縮小）- 転送量削減のため800pxに制限
+        const maxWidth = 800
+        const maxHeight = 800
         let targetWidth = width
         let targetHeight = height
 
@@ -885,9 +926,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
         console.log('選択範囲を採点:', { x, y, width, height, targetWidth, targetHeight })
       } else {
-        // 選択範囲がない場合は、ページ全体を送信（最適化）
-        const maxWidth = 1536
-        const maxHeight = 1536
+        // 選択範囲がない場合は、ページ全体を送信（最適化）- 転送量削減のため1024pxに制限
+        const maxWidth = 1024
+        const maxHeight = 1024
         let targetWidth = pdfCanvas.width
         let targetHeight = pdfCanvas.height
 
@@ -1261,7 +1302,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               const rect = canvas.getBoundingClientRect()
               const x = touch.clientX - rect.left
               const y = touch.clientY - rect.top
-              addStatusMessage(`📱 選択タッチ開始: x=${x.toFixed(0)}, y=${y.toFixed(0)}, mode=${isSelectionMode}`)
               hookStartSelection(canvas, x, y)
             }}
             onTouchMove={(e) => {
@@ -1272,13 +1312,11 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               const rect = canvas.getBoundingClientRect()
               const x = touch.clientX - rect.left
               const y = touch.clientY - rect.top
-              addStatusMessage(`📱 選択タッチ移動: x=${x.toFixed(0)}, y=${y.toFixed(0)}`)
               hookUpdateSelection(canvas, x, y)
             }}
             onTouchEnd={(e) => {
               if (!isSelectionMode || !canvasRef.current || !drawingCanvasRef.current) return
               e.preventDefault()
-              addStatusMessage('📱 選択タッチ終了')
               hookFinishSelection(canvasRef.current, drawingCanvasRef.current)
             }}
           />
@@ -1290,6 +1328,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           result={gradingResult}
           onClose={() => setGradingResult(null)}
           snsLinks={snsLinks}
+          timeLimitMinutes={snsTimeLimit}
         />
       )}
 

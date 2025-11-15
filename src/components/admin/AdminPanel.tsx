@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PDFFileRecord } from '../../utils/indexedDB';
+import { PDFFileRecord, getAppSettings, saveAppSettings, AppSettings } from '../../utils/indexedDB';
 import { getPlatformInfo } from '../../utils/storageManager';
 import GradingHistory from '../grading/GradingHistory';
 import { usePDFRecords } from '../../hooks/admin/usePDFRecords';
@@ -42,19 +42,38 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
   } = useStorage();
 
   // Local UI state
+  const [activeTab, setActiveTab] = useState<'drill' | 'admin'>('drill');
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; fileName: string } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showSNSSettings, setShowSNSSettings] = useState(false);
   const [showGradingHistory, setShowGradingHistory] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showStorageInfo, setShowStorageInfo] = useState(false);
+  const [snsTimeLimit, setSnsTimeLimit] = useState<number>(30); // デフォルト30分
 
   // Load data on mount
   useEffect(() => {
     loadPDFRecords();
     loadSNSLinks();
     initializeStorage();
+    loadSettings();
   }, []);
+
+  // 設定を読み込む
+  const loadSettings = async () => {
+    try {
+      const settings = await getAppSettings();
+      setSnsTimeLimit(settings.snsTimeLimitMinutes);
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      // エラーの場合はデフォルト値を使用
+      setSnsTimeLimit(30);
+      // データベースを再作成する必要がある場合
+      if (error instanceof Error && error.message.includes('object stores was not found')) {
+        console.log('⚠️ データベースの再作成が必要です。ブラウザをリロードしてください。');
+      }
+    }
+  };
 
   // ストレージをクリアする（確認なし、自動更新）
   const clearAllStorage = async () => {
@@ -89,6 +108,8 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
   const saveSNSSettings = async () => {
     try {
       await saveSNSSettingsHook();
+      // 時間制限設定も保存
+      await saveAppSettings({ id: 'app-settings', snsTimeLimitMinutes: snsTimeLimit });
       setShowSNSSettings(false);
     } catch (error) {
       console.error('Failed to save SNS settings:', error);
@@ -213,29 +234,76 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
           <div style={{
             backgroundColor: 'white',
             borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '600px',
+            maxWidth: '500px',
             maxHeight: '80vh',
             width: '90%',
-            overflow: 'auto'
+            display: 'flex',
+            flexDirection: 'column'
           }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '20px' }}>
-              Enjoy Links Settings
-            </h3>
-            <p style={{ margin: '0 0 20px 0', color: '#7f8c8d', fontSize: '14px' }}>
-              Select which links to show on the grading result screen
-            </p>
+            {/* ヘッダー（固定） */}
+            <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid #ecf0f1' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: '#2c3e50', fontSize: '20px' }}>
+                Enjoy Links Settings
+              </h3>
+              <p style={{ margin: 0, color: '#7f8c8d', fontSize: '14px' }}>
+                Select which links to show and set time limit
+              </p>
+            </div>
 
-            <div style={{ marginBottom: '24px' }}>
+            {/* SNSリスト（スクロール可能） */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '16px 24px'
+            }}>
+              {/* 時間制限設定 */}
+              <div style={{
+                marginBottom: '20px',
+                padding: '16px',
+                border: '2px solid #3498db',
+                borderRadius: '8px',
+                backgroundColor: '#f0f8ff'
+              }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#2c3e50'
+                }}>
+                  ⏱️ SNS利用時間制限
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={snsTimeLimit}
+                    onChange={(e) => setSnsTimeLimit(Math.max(1, Math.min(120, parseInt(e.target.value) || 1)))}
+                    style={{
+                      width: '80px',
+                      padding: '8px',
+                      fontSize: '16px',
+                      border: '2px solid #bdc3c7',
+                      borderRadius: '6px',
+                      textAlign: 'center'
+                    }}
+                  />
+                  <span style={{ fontSize: '14px', color: '#7f8c8d' }}>分</span>
+                </div>
+                <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#7f8c8d' }}>
+                  時間が経過すると警告が繰り返し表示されます
+                </p>
+              </div>
+
               {PREDEFINED_SNS.map((sns) => {
                 const isSelected = selectedSNS.has(sns.id);
-                const customUrl = customUrls[sns.id] || '';
                 const snsIcon = getSNSIcon(sns.id);
                 const iconColor = snsIcon?.color || '#3498db';
 
                 return (
                   <div key={sns.id} style={{
-                    marginBottom: '16px',
+                    marginBottom: '12px',
                     padding: '12px',
                     border: `2px solid ${isSelected ? iconColor : '#e0e0e0'}`,
                     borderRadius: '8px',
@@ -281,38 +349,19 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                         {sns.name}
                       </span>
                     </label>
-                    {isSelected && (
-                      <div style={{ marginTop: '12px', marginLeft: '44px' }}>
-                        <label style={{
-                          display: 'block',
-                          marginBottom: '6px',
-                          color: '#7f8c8d',
-                          fontSize: '12px'
-                        }}>
-                          Custom URL (optional - leave blank for default)
-                        </label>
-                        <input
-                          type="url"
-                          value={customUrl}
-                          onChange={(e) => updateCustomUrl(sns.id, e.target.value)}
-                          placeholder={sns.defaultUrl}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            border: '1px solid #ddd',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            {/* フッター（固定） */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #ecf0f1',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
               <button
                 onClick={() => setShowSNSSettings(false)}
                 style={{
@@ -587,31 +636,62 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
         <button className="help-button" onClick={() => setShowHelp(true)} title="Help">
           ?
         </button>
-        {storageInfo && (
-          <button
-            className="help-button"
-            onClick={() => setShowStorageInfo(true)}
-            title="Storage Info"
-            style={{ left: '20px', right: 'auto' }}
-          >
-            💾
-          </button>
-        )}
-        <button
-          className="help-button"
-          onClick={() => setShowGradingHistory(true)}
-          title="採点履歴を表示"
-          style={{ right: '70px' }}
-        >
-          🕒
-        </button>
         <div className="admin-header">
           <h1 className="admin-title">Welcome to Home Teacher</h1>
+
+          {/* タブ切り替え */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center',
+            marginTop: '20px'
+          }}>
+            <button
+              onClick={() => setActiveTab('drill')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: activeTab === 'drill' ? '#3498db' : 'white',
+                color: activeTab === 'drill' ? 'white' : '#2c3e50',
+                border: `2px solid #3498db`,
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>🖊️</span>
+              ドリルモード
+            </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: activeTab === 'admin' ? '#27ae60' : 'white',
+                color: activeTab === 'admin' ? 'white' : '#2c3e50',
+                border: `2px solid #27ae60`,
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>⚙️</span>
+              管理モード
+            </button>
+          </div>
         </div>
 
-      <div className="two-column-layout">
-        {/* PDF Section */}
-        <div className="pdf-section">
+      {/* ドリルモード: PDFリストのみ */}
+      {activeTab === 'drill' && (
+        <div style={{ padding: '20px' }}>
           <h2 className="section-title">PDF Files</h2>
 
           {pdfRecords.length === 0 ? (
@@ -689,9 +769,128 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
             <span>Add PDF</span>
           </button>
         </div>
+      )}
 
-        {/* SNS Links Section */}
-        <div className="sns-section">
+      {/* 管理モード: SNS設定、ストレージ情報、採点履歴、広告 */}
+      {activeTab === 'admin' && (
+        <div style={{ padding: '20px' }}>
+          {/* 広告: 上部バナー */}
+          <AdSlot slot="admin-top" />
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '20px',
+            marginTop: '20px'
+          }}>
+            {/* 採点履歴カード */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              border: '2px solid #ecf0f1'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
+                🕒 採点履歴
+              </h3>
+              <p style={{ fontSize: '14px', color: '#7f8c8d', marginBottom: '16px' }}>
+                これまでの採点結果を確認できます
+              </p>
+              <button
+                onClick={() => setShowGradingHistory(true)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#9b59b6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                履歴を表示
+              </button>
+            </div>
+
+            {/* ストレージ情報カード */}
+            {storageInfo && (
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                border: '2px solid #ecf0f1'
+              }}>
+                <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
+                  💾 Storage Information
+                </h3>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    color: '#7f8c8d'
+                  }}>
+                    <span>Usage:</span>
+                    <span style={{ fontWeight: '600', color: '#2c3e50' }}>
+                      {storageInfo.usageMB.toFixed(2)} MB / {storageInfo.quotaMB.toFixed(0)} MB
+                    </span>
+                  </div>
+
+                  <div style={{
+                    width: '100%',
+                    height: '8px',
+                    backgroundColor: '#ecf0f1',
+                    borderRadius: '4px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: `${Math.min(storageInfo.usagePercent, 100)}%`,
+                      height: '100%',
+                      backgroundColor: storageInfo.usagePercent > 80 ? '#e74c3c' : storageInfo.usagePercent > 50 ? '#f39c12' : '#27ae60',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+
+                  <div style={{
+                    marginTop: '8px',
+                    fontSize: '12px',
+                    color: '#95a5a6',
+                    textAlign: 'right'
+                  }}>
+                    {storageInfo.usagePercent.toFixed(1)}% used
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowStorageInfo(true)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  詳細を表示
+                </button>
+              </div>
+            )}
+
+            {/* SNS Links Section */}
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              border: '2px solid #ecf0f1'
+            }}>
           <h2 className="section-title">Enjoy Links</h2>
 
           {snsLinks.length > 0 ? (
@@ -727,16 +926,33 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
             </div>
           )}
 
-          <button
-            className="add-button"
-            onClick={() => setShowSNSSettings(true)}
-            style={{ backgroundColor: '#27ae60' }}
-          >
-            <span className="add-button-icon">⚙</span>
-            <span>Settings</span>
-          </button>
+              <button
+                onClick={() => setShowSNSSettings(true)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginTop: '16px'
+                }}
+              >
+                <span style={{ marginRight: '8px' }}>⚙️</span>
+                Settings
+              </button>
+            </div>
+          </div>
+
+          {/* 広告: 下部 */}
+          <div style={{ marginTop: '20px' }}>
+            <AdSlot slot="admin-sidebar" />
+          </div>
         </div>
-      </div>
+      )}
       </div>
 
       {/* 採点履歴モーダル */}

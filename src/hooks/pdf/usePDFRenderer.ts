@@ -68,6 +68,15 @@ export const usePDFRenderer = (
         const pdf = await loadingTask.promise
         setPdfDoc(pdf)
         setNumPages(pdf.numPages)
+        
+        // 保存されている最後のページ番号を復元
+        if (pdfRecord.lastPageNumber && pdfRecord.lastPageNumber <= pdf.numPages) {
+          setPageNum(pdfRecord.lastPageNumber)
+          console.log(`📖 前回のページ (${pdfRecord.lastPageNumber}) を復元しました`)
+        } else {
+          setPageNum(1)
+        }
+        
         setIsLoading(false)
         optionsRef.current?.onLoadSuccess?.(pdf.numPages)
       } catch (error) {

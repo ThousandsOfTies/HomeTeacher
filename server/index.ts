@@ -106,61 +106,36 @@ app.post('/api/grade', async (req, res) => {
     const mimeType = `image/${base64Match[1]}`
     const base64Data = base64Match[2]
 
-    // Gemini 2.5 Flash モデルを使用（画像対応、安定版）
-    // 他のオプション: 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
-    console.log(`使用モデル: ${modelName}`)
-    const model = genAI.getGenerativeModel({ model: modelName })
+    // Gemini 2.0 Flash モデルを使用（最新・最速モデル）
+    // 開発環境: gemini-2.0-flash-exp (最速、実験版)
+    // 本番環境: gemini-2.0-flash (安定版) - .envで切り替え可能
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
+    console.log(`🤖 使用モデル: ${modelName}`)
+    
+    // 生成パラメータを超積極的に最適化（最速設定）
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        temperature: 0.1, // 最小限に設定（決定論的応答で高速化）
+        maxOutputTokens: 1024, // さらに制限して高速化
+        topP: 0.5, // 大幅に絞って高速化
+        topK: 20, // トップK個のトークンのみ考慮
+      }
+    })
 
-    const prompt = `あなたは小学5年生の算数を教える優秀な先生です。
-画像には算数の問題と、生徒が赤ペンで書いた手書きの解答が含まれています。
+    const prompt = `画像の問題を採点し、以下のJSON形式で回答してください:
+{"problems":[{"problemNumber":"問題番号","studentAnswer":"赤ペンの解答","isCorrect":true/false,"correctAnswer":"正解","feedback":"コメント","explanation":"解説"}],"overallComment":"全体評価"}`
 
-【重要な注意事項】
-- 手書き文字を丁寧に読み取ってください（赤色のペンで書かれています）
-- 計算過程も確認し、途中でミスがないか注意深くチェックしてください
-- 問題文をよく読み、何を求められているのか正確に理解してください
-- 単位（cm、kg、円など）が必要な場合は、単位も確認してください
-
-【採点手順】
-1. 問題文を読み、何を求める問題か理解する
-2. 生徒が書いた赤い手書きの解答を読み取る
-3. 正しい答えを自分で計算する
-4. 生徒の解答と正しい答えを比較する
-5. 正解/不正解を判定し、フィードバックを書く
-
-【フィードバックの書き方】
-- 正解の場合：具体的に褒めて励ます（例：「正解！計算がとても正確です」）
-- 不正解の場合：
-  * どこが間違っているか具体的に指摘
-  * 正しい解き方を丁寧に説明
-  * 励ましの言葉も添える
-
-必ず以下のJSON形式で回答してください：
-
-{
-  "problems": [
-    {
-      "problemNumber": "問題番号（例: 1, 2, (1), (2)など）",
-      "problemText": "問題文をそのまま書く",
-      "studentAnswer": "生徒が書いた解答（赤い手書き文字）",
-      "isCorrect": true または false,
-      "correctAnswer": "正しい解答（計算過程も含めて）",
-      "feedback": "正解なら褒める、不正解なら間違いを指摘",
-      "explanation": "解き方の詳しい説明（ステップバイステップで）"
-    }
-  ],
-  "overallComment": "全体的な励ましのコメント"
-}`
-
-    // Gemini APIにリクエスト（リトライ機能付き）
+    // Gemini APIにリクエスト（リトライ機能付き）- 高速化のためリトライを削減
     let result
     let lastError
-    const maxRetries = 3
-    const retryDelay = 2000 // 2秒
+    const maxRetries = 1 // リトライなし（初回のみ）
+    const retryDelay = 500 // 待機時間を最小化
 
+    const startTime = Date.now()
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`採点リクエスト試行 ${attempt}/${maxRetries}`)
+        console.log(`⏱️ 採点リクエスト開始...`)
         result = await model.generateContent([
           {
             inlineData: {
@@ -170,6 +145,8 @@ app.post('/api/grade', async (req, res) => {
           },
           prompt
         ])
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
+        console.log(`✅ APIレスポンス: ${elapsedTime}秒`)
         break // 成功したらループを抜ける
       } catch (error: any) {
         lastError = error

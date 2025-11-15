@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hometeacher-api-673574334179.asia-northeast1.run.app/api'
+// 開発環境: localhost:3003、本番環境: Cloud Run
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3003/api'
 
 export interface Problem {
   problemNumber: string

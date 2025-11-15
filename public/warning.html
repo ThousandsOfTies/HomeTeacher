@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>時間切れ - HomeTeacher</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 90%;
+    }
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    h1 {
+      font-size: 36px;
+      margin: 0 0 16px 0;
+    }
+    .sns-name {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+      color: #ffd700;
+    }
+    p {
+      font-size: 18px;
+      line-height: 1.6;
+      margin: 16px 0;
+      opacity: 0.9;
+    }
+    .instruction {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+    }
+    .small {
+      font-size: 14px;
+      margin-top: 20px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">⏰</div>
+    <h1>閲覧時間終了</h1>
+    <div class="sns-name" id="snsName">SNS</div>
+    <p id="timeLimit">利用時間が終了しました</p>
+    <div class="instruction">
+      📱 SNSタブを閉じて<br>
+      🔄 このアプリを再起動してください
+    </div>
+    <p class="small">警告音が鳴り続けます</p>
+  </div>
+  
+  <script>
+    // URLパラメータから情報を取得
+    const params = new URLSearchParams(window.location.search);
+    const snsName = params.get('name') || 'SNS';
+    const timeLimit = params.get('time') || '30';
+    
+    document.getElementById('snsName').textContent = snsName;
+    document.getElementById('timeLimit').textContent = `${timeLimit}分の利用時間が終了しました`;
+    
+    // AudioContextで警告音を生成・ループ再生
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let isPlaying = false;
+    
+    function playWarningSound() {
+      if (isPlaying) return;
+      isPlaying = true;
+      
+      const playNote = (frequency, startTime, duration) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine'; // やさしい音
+        
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+      
+      const playSequence = () => {
+        const now = audioContext.currentTime;
+        // ボロンボロン系の音（下降音階）
+        playNote(880, now, 0.3);        // A5
+        playNote(659.25, now + 0.35, 0.3); // E5
+        playNote(523.25, now + 0.7, 0.5);  // C5
+        
+        // 3秒ごとに繰り返し
+        setTimeout(playSequence, 3000);
+      };
+      
+      playSequence();
+    }
+    
+    // ユーザー操作後に音を再生（autoplay制限対策）
+    document.addEventListener('click', playWarningSound, { once: true });
+    document.addEventListener('touchstart', playWarningSound, { once: true });
+    
+    // すぐに試行（許可されていれば再生）
+    setTimeout(() => {
+      if (!isPlaying) {
+        playWarningSound();
+      }
+    }, 100);
+    
+    console.log('⚠️ 警告画面を表示しました');
+  </script>
+</body>
+</html>

@@ -1,6 +1,5 @@
 import { GradingResult as GradingResultType } from '../../services/api'
 import { SNSLinkRecord } from '../../utils/indexedDB'
-import AdSlot from '../ads/AdSlot'
 import './GradingResult.css'
 import * as SimpleIcons from 'simple-icons'
 
@@ -8,6 +7,7 @@ interface GradingResultProps {
   result: GradingResultType | null
   onClose: () => void
   snsLinks?: SNSLinkRecord[]
+  timeLimitMinutes?: number // SNS利用時間制限（分）
 }
 
 // SNS名からSimple Iconsのアイコンを取得
@@ -50,8 +50,42 @@ const getSNSIcon = (name: string): { svg: string; color: string } | null => {
   return null
 }
 
-const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) => {
+const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }: GradingResultProps) => {
   if (!result) return null
+
+  // SNSリンクを時間制限付きで開く（PWA内の別タブ）
+  const openTimeLimitedTab = (url: string, name: string) => {
+    const TIME_LIMIT = timeLimitMinutes * 60 * 1000 // 設定値を使用
+    
+    console.log(`【${name}】を開こうとしています: ${url}`)
+    console.log(`⏱️ 時間制限: ${timeLimitMinutes}分`)
+    
+    // ポップアップブロックを回避するため、即座にウィンドウを開く
+    const newWindow = window.open(url, '_blank', 'noopener=no,noreferrer=no')
+    
+    if (!newWindow) {
+      console.error('ウィンドウを開けませんでした - ポップアップがブロックされています')
+      const allow = confirm(`ポップアップがブロックされました。\n【${name}】を開くにはポップアップを許可してください。\n\nブラウザの設定でこのサイトのポップアップを「常に許可」にしてから、もう一度お試しください。`)
+      if (allow) {
+        // フォールバック: 通常のタブで開く（時間制限なし）
+        window.open(url, '_blank')
+      }
+      return
+    }
+
+    console.log('ウィンドウが開きました。タイマーを開始します。')
+
+    // 時間制限後に警告画面に遷移
+    setTimeout(() => {
+      console.log(`【${name}】${timeLimitMinutes}分経過 - 警告画面に遷移します`)
+      
+      // ドリルアプリ側を警告画面に遷移（音声ループ再生）
+      const warningUrl = `${window.location.origin}${import.meta.env.BASE_URL || '/'}warning.html?name=${encodeURIComponent(name)}&time=${timeLimitMinutes}`
+      window.location.href = warningUrl
+    }, TIME_LIMIT)
+
+    console.log(`【${name}】を時間制限付き（${timeLimitMinutes}分）で開きました`)
+  }
 
   return (
     <div className="grading-result-overlay">
@@ -64,9 +98,6 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
         </div>
 
         <div className="result-content">
-          {/* 広告: 上部バナー */}
-          <AdSlot slot="result-top" />
-
           {result.problems && result.problems.length > 0 ? (
             <div className="problems-list">
               {result.problems.map((problem, index) => (
@@ -131,9 +162,6 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
               <p>{result.overallComment}</p>
             </div>
           )}
-
-          {/* 広告: 下部レクタングル */}
-          <AdSlot slot="result-bottom" />
         </div>
 
         {snsLinks.length > 0 && (
@@ -154,11 +182,9 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
                 const iconColor = snsIcon?.color || '#3498db'
 
                 return (
-                  <a
+                  <button
                     key={link.id}
-                    href={fullUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => openTimeLimitedTab(fullUrl, link.name)}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
@@ -194,7 +220,7 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
                       const svg = e.currentTarget.querySelector('svg')
                       if (svg) svg.style.fill = iconColor
                     }}
-                    title={fullUrl}
+                    title={`${fullUrl}（2分制限）`}
                   >
                     {snsIcon ? (
                       <div
@@ -205,7 +231,8 @@ const GradingResult = ({ result, onClose, snsLinks = [] }: GradingResultProps) =
                       <span style={{ fontSize: '40px' }}>{link.icon}</span>
                     )}
                     <span>{link.name}</span>
-                  </a>
+                    <span style={{ fontSize: '10px', color: '#95a5a6' }}>⏱️ 2分制限</span>
+                  </button>
                 )
               })}
             </div>

@@ -2,7 +2,7 @@
 # 使用方法: .\deploy-cloud-run.ps1
 
 # 設定
-$PROJECT_ID = "hometeacher-478013"
+$PROJECT_ID = "hometeacher-api"
 $SERVICE_NAME = "hometeacher-api"
 $REGION = "asia-northeast1"  # 東京リージョン
 $IMAGE_NAME = "gcr.io/$PROJECT_ID/$SERVICE_NAME"

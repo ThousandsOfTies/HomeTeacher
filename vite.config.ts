@@ -17,6 +17,8 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/HomeTeacher/',
+        scope: '/HomeTeacher/',
         icons: [
           {
             src: 'pwa-192x192.png',

@@ -1,10 +1,11 @@
 // IndexedDB管理ユーティリティ
 
 const DB_NAME = 'HomeTeacherDB';
-const DB_VERSION = 6; // バージョンを上げてBlob対応
+const DB_VERSION = 7; // バージョンを上げて設定ストア追加
 const STORE_NAME = 'pdfFiles';
 const SNS_STORE_NAME = 'snsLinks';
 const GRADING_HISTORY_STORE_NAME = 'gradingHistory';
+const SETTINGS_STORE_NAME = 'settings';
 
 export interface PDFFileRecord {
   id: string; // ユニークID (ファイル名 + タイムスタンプ)
@@ -12,6 +13,7 @@ export interface PDFFileRecord {
   thumbnail?: string; // 先頭ページのサムネイル画像（Base64）
   fileData?: Blob; // Blob形式のPDFデータ（v6から）
   lastOpened: number; // タイムスタンプ
+  lastPageNumber?: number; // 最後に開いていたページ番号
   drawings: Record<number, string>; // ページ番号 -> JSON文字列のマップ
 }
 
@@ -36,6 +38,11 @@ export interface GradingHistoryRecord {
   explanation: string; // 解説
   timestamp: number; // 実施時刻（タイムスタンプ）
   imageData?: string; // 採点時の画像データ（オプション）
+}
+
+export interface AppSettings {
+  id: 'app-settings'; // 固定ID
+  snsTimeLimitMinutes: number; // SNS利用制限時間（分）
 }
 
 // データベースを開く
@@ -73,6 +80,11 @@ function openDB(): Promise<IDBDatabase> {
         historyStore.createIndex('timestamp', 'timestamp', { unique: false });
         historyStore.createIndex('pdfId', 'pdfId', { unique: false });
         historyStore.createIndex('pageNumber', 'pageNumber', { unique: false });
+      }
+
+      // 設定用オブジェクトストアが存在しない場合は作成
+      if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+        db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'id' });
       }
 
       // v6へのアップグレード: Base64からBlobへ移行
@@ -405,6 +417,46 @@ export async function deleteGradingHistory(id: string): Promise<void> {
 
     request.onerror = () => {
       reject(new Error('採点履歴の削除に失敗しました'));
+    };
+  });
+}
+
+// アプリ設定を取得
+export async function getAppSettings(): Promise<AppSettings> {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([SETTINGS_STORE_NAME], 'readonly');
+    const objectStore = transaction.objectStore(SETTINGS_STORE_NAME);
+    const request = objectStore.get('app-settings');
+
+    request.onsuccess = () => {
+      const settings = request.result as AppSettings | undefined;
+      // デフォルト値: 30分
+      resolve(settings || { id: 'app-settings', snsTimeLimitMinutes: 30 });
+    };
+
+    request.onerror = () => {
+      reject(new Error('設定の取得に失敗しました'));
+    };
+  });
+}
+
+// アプリ設定を保存
+export async function saveAppSettings(settings: AppSettings): Promise<void> {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([SETTINGS_STORE_NAME], 'readwrite');
+    const objectStore = transaction.objectStore(SETTINGS_STORE_NAME);
+    const request = objectStore.put(settings);
+
+    request.onsuccess = () => {
+      resolve();
+    };
+
+    request.onerror = () => {
+      reject(new Error('設定の保存に失敗しました'));
     };
   });
 }
