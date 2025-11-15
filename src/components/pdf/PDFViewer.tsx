@@ -1741,41 +1741,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           </div>
         </div>
       )}
-
-      {/* ステータスバー */}
-      <div className="status-bar">
-        <div className="status-messages">
-          {statusMessages.length > 0 ? (
-            statusMessages.slice(-3).map((msg, idx) => (
-              <div key={idx} className="status-message-item">
-                {msg}
-              </div>
-            ))
-          ) : (
-            <div className="status-message-item">準備完了</div>
-          )}
-        </div>
-        <button
-          className="console-button"
-          onClick={() => {
-            // Chromiumのコンソールを開く（開発者ツール）
-            // @ts-ignore
-            if (window.require) {
-              try {
-                // @ts-ignore
-                window.require('electron').remote.getCurrentWindow().webContents.openDevTools()
-              } catch (e) {
-                alert('開発者ツールを開けません。F12キーを押してください。')
-              }
-            } else {
-              alert('F12キーを押して開発者コンソールを開いてください。')
-            }
-          }}
-          title="開発者コンソールを開く（F12）"
-        >
-          🔧
-        </button>
-      </div>
     </div>
     </div>
   )
