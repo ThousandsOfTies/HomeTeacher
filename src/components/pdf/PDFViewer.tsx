@@ -1082,6 +1082,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     setIsGrading(true)
     setGradingError(null) // エラーをクリア
     try {
+      console.log('📱 採点開始 - デバイス情報:', {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        canvasWidth: canvasRef.current.width,
+        canvasHeight: canvasRef.current.height,
+        selectionRect: selectionRect
+      })
+      
       // PDFと手書きを合成した画像を作成
       const tempCanvas = document.createElement('canvas')
       const pdfCanvas = canvasRef.current
@@ -1096,6 +1104,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         const width = Math.abs(endX - startX)
         const height = Math.abs(endY - startY)
 
+        console.log('📐 選択範囲:', { x, y, width, height })
+
         // 選択範囲が小さすぎる場合はエラー
         if (width < 10 || height < 10) {
           setGradingError('選択範囲が小さすぎます。もう少し大きな範囲を選択してください。')
@@ -1103,9 +1113,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           return
         }
 
-        // 最大解像度を設定（大きすぎる画像は縮小）- 転送量削減のため800pxに制限
-        const maxWidth = 800
-        const maxHeight = 800
+        // iPad対応: より厳しい最大解像度制限（メモリ節約のため）
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        const maxWidth = isIOS ? 600 : 800
+        const maxHeight = isIOS ? 600 : 800
         let targetWidth = width
         let targetHeight = height
 
@@ -1118,27 +1129,45 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         }
 
         // 切り出し用のキャンバスを作成
-        tempCanvas.width = targetWidth
-        tempCanvas.height = targetHeight
-        const ctx = tempCanvas.getContext('2d')!
+        try {
+          tempCanvas.width = targetWidth
+          tempCanvas.height = targetHeight
+        } catch (error) {
+          console.error('❌ Canvas作成エラー:', error)
+          throw new Error(`Canvas作成失敗 (${targetWidth}x${targetHeight}): ${error instanceof Error ? error.message : String(error)}`)
+        }
+        
+        const ctx = tempCanvas.getContext('2d')
+        if (!ctx) {
+          throw new Error('Canvas 2Dコンテキストの取得に失敗しました')
+        }
 
         // 高品質な縮小処理
         ctx.imageSmoothingEnabled = true
         ctx.imageSmoothingQuality = 'high'
 
-        // PDFの選択範囲を描画（縮小あり）
-        ctx.drawImage(pdfCanvas, x, y, width, height, 0, 0, targetWidth, targetHeight)
+        try {
+          // PDFの選択範囲を描画（縮小あり）
+          ctx.drawImage(pdfCanvas, x, y, width, height, 0, 0, targetWidth, targetHeight)
 
-        // 手書きの選択範囲を重ねる（縮小あり）
-        ctx.drawImage(drawingCanvasRef.current, x, y, width, height, 0, 0, targetWidth, targetHeight)
+          // 手書きの選択範囲を重ねる（縮小あり）
+          ctx.drawImage(drawingCanvasRef.current, x, y, width, height, 0, 0, targetWidth, targetHeight)
+        } catch (error) {
+          console.error('❌ Canvas描画エラー:', error)
+          throw new Error(`Canvas描画失敗: ${error instanceof Error ? error.message : String(error)}`)
+        }
 
-        console.log('選択範囲を採点:', { x, y, width, height, targetWidth, targetHeight })
+        console.log('✅ 選択範囲を採点:', { x, y, width, height, targetWidth, targetHeight })
       } else {
-        // 選択範囲がない場合は、ページ全体を送信（最適化）- 転送量削減のため1024pxに制限
-        const maxWidth = 1024
-        const maxHeight = 1024
+        // 選択範囲がない場合は、ページ全体を送信（最適化）
+        // iPad対応: より厳しい最大解像度制限
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        const maxWidth = isIOS ? 800 : 1024
+        const maxHeight = isIOS ? 800 : 1024
         let targetWidth = pdfCanvas.width
         let targetHeight = pdfCanvas.height
+
+        console.log('📄 ページ全体:', { originalWidth: pdfCanvas.width, originalHeight: pdfCanvas.height })
 
         // ページ全体も大きすぎる場合は縮小
         if (pdfCanvas.width > maxWidth || pdfCanvas.height > maxHeight) {
@@ -1148,32 +1177,71 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           console.log(`ページ全体を縮小: ${pdfCanvas.width}x${pdfCanvas.height} → ${targetWidth}x${targetHeight}`)
         }
 
-        tempCanvas.width = targetWidth
-        tempCanvas.height = targetHeight
-        const ctx = tempCanvas.getContext('2d')!
+        try {
+          tempCanvas.width = targetWidth
+          tempCanvas.height = targetHeight
+        } catch (error) {
+          console.error('❌ Canvas作成エラー:', error)
+          throw new Error(`Canvas作成失敗 (${targetWidth}x${targetHeight}): ${error instanceof Error ? error.message : String(error)}`)
+        }
+        
+        const ctx = tempCanvas.getContext('2d')
+        if (!ctx) {
+          throw new Error('Canvas 2Dコンテキストの取得に失敗しました')
+        }
 
         // 高品質な縮小処理
         ctx.imageSmoothingEnabled = true
         ctx.imageSmoothingQuality = 'high'
 
-        // PDFを描画
-        ctx.drawImage(pdfCanvas, 0, 0, targetWidth, targetHeight)
+        try {
+          // PDFを描画
+          ctx.drawImage(pdfCanvas, 0, 0, targetWidth, targetHeight)
 
-        // 手書きを重ねる
-        ctx.drawImage(drawingCanvasRef.current, 0, 0, targetWidth, targetHeight)
+          // 手書きを重ねる
+          ctx.drawImage(drawingCanvasRef.current, 0, 0, targetWidth, targetHeight)
+        } catch (error) {
+          console.error('❌ Canvas描画エラー:', error)
+          throw new Error(`Canvas描画失敗: ${error instanceof Error ? error.message : String(error)}`)
+        }
 
-        console.log('ページ全体を採点:', { targetWidth, targetHeight })
+        console.log('✅ ページ全体を採点:', { targetWidth, targetHeight })
       }
 
       // 合成した画像をBase64に変換（JPEG形式、品質85%で圧縮）
-      // 品質を少し上げて文字認識精度を向上
-      imageData = tempCanvas.toDataURL('image/jpeg', 0.85)
+      // iPad対応: メモリ節約のため品質を下げる
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      const quality = isIOS ? 0.75 : 0.85
+      
+      try {
+        imageData = tempCanvas.toDataURL('image/jpeg', quality)
+      } catch (error) {
+        console.error('❌ toDataURL failed:', error)
+        // iPadで失敗した場合、さらに品質を下げて再試行
+        if (isIOS) {
+          console.log('🔄 品質を下げて再試行 (quality=0.6)...')
+          try {
+            imageData = tempCanvas.toDataURL('image/jpeg', 0.6)
+          } catch (retryError) {
+            console.error('❌ 再試行も失敗:', retryError)
+            throw new Error(`画像変換エラー (品質:${quality}): ${error instanceof Error ? error.message : String(error)}`)
+          }
+        } else {
+          throw new Error(`画像変換エラー: ${error instanceof Error ? error.message : String(error)}`)
+        }
+      }
 
       // データサイズをログ出力
       const sizeInKB = Math.round(imageData.length / 1024)
       console.log(`送信画像サイズ: ${sizeInKB} KB, 画像サイズ: ${tempCanvas.width}x${tempCanvas.height}px`)
 
+      // 画像サイズが大きすぎる場合は警告
+      if (sizeInKB > 5000) {
+        console.warn('⚠️ 画像サイズが大きすぎます:', sizeInKB, 'KB')
+      }
+
       // APIに送信
+      console.log('📤 APIに送信中...')
       const response = await gradeWork(imageData, pageNum)
 
       if (response.success) {
@@ -1213,16 +1281,25 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         setGradingError('採点に失敗しました: ' + (response.error || '不明なエラー'))
       }
     } catch (error) {
-      console.error('採点エラー:', error)
+      console.error('❌ 採点エラー:', error)
       const errorMessage = error instanceof Error ? error.message : String(error)
 
       // エラーメッセージをより分かりやすくする
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-        setGradingError('サーバーに接続できませんでした。バックエンドサーバーが起動しているか確認してください。')
+        setGradingError('サーバーに接続できませんでした。ネットワーク接続とバックエンドサーバーの起動状態を確認してください。')
+        addStatusMessage('❌ サーバー接続エラー')
       } else if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
         setGradingError('Google AIが過負荷状態です。しばらく待ってから再度お試しください。')
+        addStatusMessage('⚠️ AI過負荷')
+      } else if (errorMessage.includes('Canvas作成') || errorMessage.includes('Canvas描画')) {
+        setGradingError(`画像処理エラー: ${errorMessage}\n\nPDFの解像度が高すぎる可能性があります。ページをズームアウトしてから再度お試しください。`)
+        addStatusMessage('❌ Canvas処理エラー')
+      } else if (errorMessage.includes('toDataURL') || errorMessage.includes('画像変換')) {
+        setGradingError(`画像変換エラー: ${errorMessage}\n\niPadのメモリ不足の可能性があります。他のアプリを閉じてから再度お試しください。`)
+        addStatusMessage('❌ 画像変換エラー')
       } else {
         setGradingError('採点中にエラーが発生しました: ' + errorMessage)
+        addStatusMessage('❌ 採点エラー')
       }
     } finally {
       setIsGrading(false)
