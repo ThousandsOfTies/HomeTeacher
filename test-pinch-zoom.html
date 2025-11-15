@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ピンチズームテスト - iPad</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      background: #e0e0e0;
+      overflow: auto; /* 実際のHomeTeacherと同じ：スクロール可能 */
+      position: relative;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      touch-action: none;
+    }
+
+    /* canvas-wrapper: 実際のPDFビューアと同じ構造 */
+    /* flexの子要素として中央配置される＝位置が動的に変わる */
+    .canvas-wrapper {
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* canvas-pan-layer: translate変換 */
+    .canvas-pan-layer {
+      position: relative;
+      transform-origin: 0 0;
+      transition: none;
+    }
+
+    /* canvas-scale-layer: scale変換 */
+    .canvas-scale-layer {
+      position: relative;
+      transform-origin: 0 0;
+      transition: none;
+    }
+
+    /* 疑似canvas（画像） */
+    .fake-canvas {
+      display: block;
+      width: 600px;
+      height: 800px;
+      background: white;
+      border: 2px solid #333;
+      position: relative;
+    }
+
+    /* グリッド線を描画して動きを確認しやすく */
+    .fake-canvas::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(0deg, #ddd 1px, transparent 1px),
+        linear-gradient(90deg, #ddd 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    /* 中央のマーカー */
+    .center-marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    /* デバッグ情報パネル */
+    .debug-panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      z-index: 1000;
+      max-width: 300px;
+    }
+
+    .debug-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #4CAF50;
+    }
+
+    .debug-value {
+      color: #FFD700;
+    }
+
+    /* タッチマーカー（デバッグ用） */
+    .touch-marker {
+      position: fixed;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 3px solid white;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 999;
+    }
+
+    .touch-marker.touch1 {
+      background: rgba(0, 150, 255, 0.5);
+    }
+
+    .touch-marker.touch2 {
+      background: rgba(255, 100, 0, 0.5);
+    }
+
+    .touch-marker.center {
+      background: rgba(255, 0, 255, 0.7);
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="container">
+    <div class="canvas-wrapper" id="wrapper">
+      <div class="canvas-pan-layer" id="panLayer">
+        <div class="canvas-scale-layer" id="scaleLayer">
+          <div class="fake-canvas">
+            <div class="center-marker">●</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- デバッグ情報 -->
+  <div class="debug-panel" id="debugPanel">
+    <h3>📊 ピンチズーム デバッグ</h3>
+    <div>Zoom: <span class="debug-value" id="zoomValue">1.00</span></div>
+    <div>Pan: (<span class="debug-value" id="panXValue">0</span>, <span class="debug-value" id="panYValue">0</span>)</div>
+    <div>Touches: <span class="debug-value" id="touchCount">0</span></div>
+    <div>Distance: <span class="debug-value" id="distanceValue">-</span></div>
+    <div>Center: (<span class="debug-value" id="centerXValue">-</span>, <span class="debug-value" id="centerYValue">-</span>)</div>
+    <div style="margin-top: 10px; color: #FFB6C1; font-size: 11px;">
+      ※ container基準の座標<br>
+      ※ overflow:auto でスクロール可能<br>
+      ※ wrapper は flex で中央配置
+    </div>
+  </div>
+
+  <!-- タッチマーカー -->
+  <div class="touch-marker touch1" id="marker1" style="display: none;"></div>
+  <div class="touch-marker touch2" id="marker2" style="display: none;"></div>
+  <div class="touch-marker center" id="markerCenter" style="display: none;"></div>
+
+  <script>
+    // 状態管理
+    let zoom = 1.0
+    let panOffset = { x: 0, y: 0 }
+    let prevPinchDistance = null
+    let prevPinchCenter = null
+    let prevTouch1 = null
+    let prevTouch2 = null
+
+    // DOM要素
+    const container = document.getElementById('container')
+    const panLayer = document.getElementById('panLayer')
+    const scaleLayer = document.getElementById('scaleLayer')
+    const marker1 = document.getElementById('marker1')
+    const marker2 = document.getElementById('marker2')
+    const markerCenter = document.getElementById('markerCenter')
+
+    // デバッグ表示更新
+    function updateDebug() {
+      document.getElementById('zoomValue').textContent = zoom.toFixed(2)
+      document.getElementById('panXValue').textContent = Math.round(panOffset.x)
+      document.getElementById('panYValue').textContent = Math.round(panOffset.y)
+    }
+
+    // Transform適用
+    function applyTransform() {
+      panLayer.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`
+      scaleLayer.style.transform = `scale(${zoom})`
+      updateDebug()
+    }
+
+    // 2本指タッチ開始
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+
+        // 2点間の距離を計算
+        const dx = touch1.clientX - touch2.clientX
+        const dy = touch1.clientY - touch2.clientY
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        // コンテナ相対座標
+        const containerRect = container.getBoundingClientRect()
+        const touch1X = touch1.clientX - containerRect.left
+        const touch1Y = touch1.clientY - containerRect.top
+        const touch2X = touch2.clientX - containerRect.left
+        const touch2Y = touch2.clientY - containerRect.top
+
+        prevTouch1 = { x: touch1X, y: touch1Y }
+        prevTouch2 = { x: touch2X, y: touch2Y }
+
+        // 中心座標（単純な中点）
+        const centerX = (touch1X + touch2X) / 2
+        const centerY = (touch1Y + touch2Y) / 2
+        prevPinchCenter = { x: centerX, y: centerY }
+        prevPinchDistance = distance
+
+        // タッチマーカー表示
+        marker1.style.display = 'block'
+        marker2.style.display = 'block'
+        markerCenter.style.display = 'block'
+        marker1.style.left = touch1.clientX + 'px'
+        marker1.style.top = touch1.clientY + 'px'
+        marker2.style.left = touch2.clientX + 'px'
+        marker2.style.top = touch2.clientY + 'px'
+        markerCenter.style.left = (containerRect.left + centerX) + 'px'
+        markerCenter.style.top = (containerRect.top + centerY) + 'px'
+
+        document.getElementById('touchCount').textContent = '2'
+        document.getElementById('distanceValue').textContent = Math.round(distance) + 'px'
+        document.getElementById('centerXValue').textContent = Math.round(centerX)
+        document.getElementById('centerYValue').textContent = Math.round(centerY)
+      }
+    }, { passive: false })
+
+    // 2本指タッチ移動（Google Maps方式）
+    container.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 2 || prevPinchDistance === null || prevPinchCenter === null ||
+          !prevTouch1 || !prevTouch2) {
+        return
+      }
+
+      e.preventDefault()
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      
+      // 重要：containerRectを毎回取得（flexでwrapperの位置が変わるため）
+      const containerRect = container.getBoundingClientRect()
+
+      // 現在の2点間の距離
+      const dx = touch1.clientX - touch2.clientX
+      const dy = touch1.clientY - touch2.clientY
+      const currentDistance = Math.sqrt(dx * dx + dy * dy)
+
+      // コンテナ相対座標
+      const touch1X = touch1.clientX - containerRect.left
+      const touch1Y = touch1.clientY - containerRect.top
+      const touch2X = touch2.clientX - containerRect.left
+      const touch2Y = touch2.clientY - containerRect.top
+
+      // 各指の移動量
+      const move1X = touch1X - prevTouch1.x
+      const move1Y = touch1Y - prevTouch1.y
+      const move2X = touch2X - prevTouch2.x
+      const move2Y = touch2Y - prevTouch2.y
+      
+      const distance1 = Math.sqrt(move1X * move1X + move1Y * move1Y)
+      const distance2 = Math.sqrt(move2X * move2X + move2Y * move2Y)
+      
+      const totalMove = distance1 + distance2
+      
+      // 中心位置を移動量の比率で計算
+      let currentCenterX, currentCenterY
+      
+      if (totalMove < 0.1) {
+        currentCenterX = (touch1X + touch2X) / 2
+        currentCenterY = (touch1Y + touch2Y) / 2
+      } else {
+        const ratio = distance2 / totalMove
+        currentCenterX = touch1X * ratio + touch2X * (1 - ratio)
+        currentCenterY = touch1Y * ratio + touch2Y * (1 - ratio)
+      }
+
+      // タッチマーカー更新
+      marker1.style.left = touch1.clientX + 'px'
+      marker1.style.top = touch1.clientY + 'px'
+      marker2.style.left = touch2.clientX + 'px'
+      marker2.style.top = touch2.clientY + 'px'
+      markerCenter.style.left = (containerRect.left + currentCenterX) + 'px'
+      markerCenter.style.top = (containerRect.top + currentCenterY) + 'px'
+
+      // ピンチズーム（距離の変化が1%以上）
+      const distanceRatio = currentDistance / prevPinchDistance
+      const ZOOM_THRESHOLD = 0.01
+      if (Math.abs(distanceRatio - 1) > ZOOM_THRESHOLD) {
+        const oldZoom = zoom
+        const newZoom = Math.max(0.5, Math.min(5, oldZoom * distanceRatio))
+
+        // Google Maps方式：指の中心がズーム後も同じコンテンツ位置を指す
+        const contentX = (currentCenterX - panOffset.x) / oldZoom
+        const contentY = (currentCenterY - panOffset.y) / oldZoom
+
+        const newOffsetX = currentCenterX - contentX * newZoom
+        const newOffsetY = currentCenterY - contentY * newZoom
+
+        panOffset.x = newOffsetX
+        panOffset.y = newOffsetY
+        zoom = newZoom
+        prevPinchDistance = currentDistance
+      }
+
+      // 前回の指位置を更新
+      prevTouch1 = { x: touch1X, y: touch1Y }
+      prevTouch2 = { x: touch2X, y: touch2Y }
+
+      // 2本指パン（中心の移動が1px以上）
+      const centerDx = currentCenterX - prevPinchCenter.x
+      const centerDy = currentCenterY - prevPinchCenter.y
+      const PAN_THRESHOLD = 1
+      if (Math.abs(centerDx) > PAN_THRESHOLD || Math.abs(centerDy) > PAN_THRESHOLD) {
+        panOffset.x += centerDx
+        panOffset.y += centerDy
+        prevPinchCenter = { x: currentCenterX, y: currentCenterY }
+      }
+
+      // デバッグ情報更新
+      document.getElementById('distanceValue').textContent = Math.round(currentDistance) + 'px'
+      document.getElementById('centerXValue').textContent = Math.round(currentCenterX)
+      document.getElementById('centerYValue').textContent = Math.round(currentCenterY)
+
+      applyTransform()
+    }, { passive: false })
+
+    // 2本指タッチ終了
+    container.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        prevPinchDistance = null
+        prevPinchCenter = null
+        prevTouch1 = null
+        prevTouch2 = null
+
+        // タッチマーカー非表示
+        marker1.style.display = 'none'
+        marker2.style.display = 'none'
+        markerCenter.style.display = 'none'
+
+        document.getElementById('touchCount').textContent = e.touches.length
+        document.getElementById('distanceValue').textContent = '-'
+      }
+    }, { passive: false })
+
+    // 初期表示
+    applyTransform()
+
+    console.log('✅ ピンチズームテストページ準備完了')
+    console.log('📱 iPadで2本指でピンチズームしてください')
+  </script>
+</body>
+</html>
