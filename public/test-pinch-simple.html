@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>正しいピンチズーム実装</title>
+  <title>正しいピンチズーム実装 + PDF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -37,37 +38,10 @@
     }
 
     .canvas {
-      width: 400px;
-      height: 600px;
+      display: block;
       background: white;
-      border: 3px solid #333;
-      position: relative;
-    }
-
-    .grid {
-      position: absolute;
-      inset: 0;
-      background-image: 
-        linear-gradient(0deg, #ddd 1px, transparent 1px),
-        linear-gradient(90deg, #ddd 1px, transparent 1px);
-      background-size: 50px 50px;
-    }
-
-    .center-mark {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 60px;
-      height: 60px;
-      background: red;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 32px;
-      font-weight: bold;
+      border: 2px solid #333;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .info {
@@ -137,21 +111,58 @@
 
   <div class="viewport" id="viewport">
     <div class="canvas-layer" id="layer">
-      <div class="canvas">
-        <div class="grid"></div>
-        <div class="center-mark">●</div>
-      </div>
+      <canvas id="canvas" class="canvas"></canvas>
     </div>
   </div>
 
   <script>
+    // PDF.js setup
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
     const viewport = document.getElementById('viewport')
     const layer = document.getElementById('layer')
+    const canvas = document.getElementById('canvas')
+    const ctx = canvas.getContext('2d')
+
+    // サンプルPDFを生成（シンプルな1ページPDF）
+    async function createSamplePDF() {
+      // Base64エンコードされたシンプルなPDFデータ
+      const pdfData = atob(
+        'JVBERi0xLjQKJeLjz9MKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgNzkyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCjw8L0xlbmd0aCAzOD4+CnN0cmVhbQpCVAovRjEgNDggVGYKMTAwIDcwMCBUZApUSGVsbG8gUERGIQpFVAplbmRzdHJlYW0KZW5kb2JqCjEgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDIgMCBSPj4KZW5kb2JqCjIgMCBvYmoKPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjUgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDE3NCAwMDAwMCBuIAowMDAwMDAwMjIzIDAwMDAwIG4gCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA5NCAwMDAwMCBuIAowMDAwMDAwMjgwIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMzU3CiUlRU9GCg=='
+      )
+      
+      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData.split('').map(c => c.charCodeAt(0))) })
+      const pdf = await loadingTask.promise
+      const page = await pdf.getPage(1)
+      
+      // PDFページのサイズを取得
+      const originalViewport = page.getViewport({ scale: 1.0 })
+      
+      // Canvas ize設定
+      const scale = 2.0 // 高解像度表示
+      const pdfViewport = page.getViewport({ scale })
+      
+      canvas.width = pdfViewport.width
+      canvas.height = pdfViewport.height
+      
+      // PDFをレンダリング
+      await page.render({
+        canvasContext: ctx,
+        viewport: pdfViewport
+      }).promise
+      
+      console.log('✅ PDF loaded:', canvas.width, 'x', canvas.height)
+      
+      // 初期位置を画面中央に設定
+      originX = window.innerWidth / 2 - canvas.width / 2
+      originY = window.innerHeight / 2 - canvas.height / 2
+      applyTransform()
+    }
 
     // 変換の状態
     let scale = 1.0
-    let originX = window.innerWidth / 2 - 200  // canvas中心を画面中央に
-    let originY = window.innerHeight / 2 - 300
+    let originX = 0
+    let originY = 0
 
     // ピンチ状態
     let initialDistance = null
@@ -265,10 +276,24 @@
       }
     }, { passive: false })
 
-    // 初期表示
-    applyTransform()
+    // PDFを読み込んで表示
+    createSamplePDF().catch(err => {
+      console.error('PDF load error:', err)
+      // フォールバック: 空のcanvasを表示
+      canvas.width = 600
+      canvas.height = 800
+      ctx.fillStyle = 'white'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = 'black'
+      ctx.font = '24px sans-serif'
+      ctx.fillText('Sample PDF', 50, 100)
+      
+      originX = window.innerWidth / 2 - canvas.width / 2
+      originY = window.innerHeight / 2 - canvas.height / 2
+      applyTransform()
+    })
     
-    console.log('✅ 正しい基本構造のピンチズーム')
+    console.log('✅ 正しい基本構造のピンチズーム + PDF')
     console.log('📐 transform-origin: 0 0')
     console.log('📱 touchstartで初期値保存 → touchmoveで初期値から計算')
   </script>
