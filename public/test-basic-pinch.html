@@ -21,19 +21,20 @@
       width: 100vw;
       height: 100vh;
       background: #e0e0e0;
-      overflow: auto;
+      overflow: hidden;
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .content {
-      position: absolute;
-      top: 50%;
-      left: 50%;
       width: 400px;
       height: 600px;
       background: white;
       border: 3px solid #333;
-      transform-origin: 0 0;
+      transform-origin: center center;
+      position: relative;
     }
 
     .grid {
@@ -140,8 +141,8 @@
 
     // 現在の変換状態
     let scale = 1.0
-    let translateX = -200  // 初期位置：中央（width/2）
-    let translateY = -300  // 初期位置：中央（height/2）
+    let translateX = 0
+    let translateY = 0
 
     // ピンチズーム用の前回値
     let lastDistance = null
@@ -163,9 +164,19 @@
     }
 
     function getCenter(touch1, touch2) {
+      // ビューポート座標での中心
       return {
         x: (touch1.clientX + touch2.clientX) / 2,
         y: (touch1.clientY + touch2.clientY) / 2
+      }
+    }
+
+    // コンテンツの中心座標（ビューポート座標）を取得
+    function getContentCenter() {
+      const rect = content.getBoundingClientRect()
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
       }
     }
 
@@ -202,20 +213,21 @@
         const oldScale = scale
         scale = Math.max(0.5, Math.min(5.0, scale * scaleChange))
         
-        // 指の中心がビューポート上で指しているコンテンツ座標
-        // コンテンツ座標 = (ビューポート座標 - translate) / scale
-        const contentX = (lastCenterX - translateX) / oldScale
-        const contentY = (lastCenterY - translateY) / oldScale
+        // コンテンツの現在の中心座標
+        const contentCenter = getContentCenter()
         
-        // ズーム後も同じコンテンツ座標が指の中心に来るように調整
-        translateX = lastCenterX - contentX * scale
-        translateY = lastCenterY - contentY * scale
+        // 指の中心からコンテンツ中心へのベクトル
+        const dx = contentCenter.x - lastCenterX
+        const dy = contentCenter.y - lastCenterY
+        
+        // スケール変化による位置調整
+        const scaleFactor = scale / oldScale
+        translateX += dx * (scaleFactor - 1)
+        translateY += dy * (scaleFactor - 1)
         
         // パン（指の中心の移動）
-        const centerDx = newCenter.x - lastCenterX
-        const centerDy = newCenter.y - lastCenterY
-        translateX += centerDx
-        translateY += centerDy
+        translateX += newCenter.x - lastCenterX
+        translateY += newCenter.y - lastCenterY
         
         // 前回値を更新
         lastDistance = newDistance
