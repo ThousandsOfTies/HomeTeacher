@@ -190,6 +190,10 @@
   left: 0;
   z-index: 10;
   pointer-events: auto;
+  /* Apple Pencil対応: ブラウザのデフォルトタッチ動作を無効化 */
+  touch-action: none;
+  /* iOS Safari: スクロールバウンス効果を無効化 */
+  -webkit-overflow-scrolling: auto;
 }
 
 .drawing-canvas.drawing-mode {

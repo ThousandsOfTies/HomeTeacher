@@ -547,17 +547,43 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
-  // タッチでの描画機能（1本指）
+  // タッチでの描画機能（Apple Pencil対応 + パームリジェクション）
   const handleDrawingTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length !== 1) return // 1本指のみ
     if (!drawingCanvasRef.current) return
     if (!isDrawingMode && !isEraserMode) return
+
+    // パームリジェクション: Apple Pencilのみを受け付ける
+    // touchType が "stylus" の場合のみ描画を開始
+    const touch = e.touches[0]
+    
+    // Apple Pencilかどうかを判定
+    // @ts-ignore - touchType は標準プロパティだが型定義にない場合がある
+    const touchType = touch.touchType || 'direct'
+    
+    console.log('✋ Touch Start:', {
+      touchCount: e.touches.length,
+      touchType: touchType,
+      // @ts-ignore
+      force: touch.force,
+      // @ts-ignore
+      radiusX: touch.radiusX,
+      // @ts-ignore
+      radiusY: touch.radiusY
+    })
+
+    // Apple Pencil (stylus) 以外は無視（パームリジェクション）
+    if (touchType !== 'stylus') {
+      console.log('⚠️ 指またはパームタッチを無視:', touchType)
+      return
+    }
+
+    // 2本以上のタッチは無視（ピンチズームなど）
+    if (e.touches.length !== 1) return
 
     e.preventDefault()
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
 
-    const touch = e.touches[0]
     const { x, y } = toCanvasCoordinates(touch.clientX, touch.clientY, rect)
 
     if (isEraserMode) {
@@ -569,14 +595,29 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }
 
   const handleDrawingTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length !== 1) return
     if (!drawingCanvasRef.current) return
+
+    // 描画中または消しゴム使用中のみ処理
+    if (!isCurrentlyDrawing && !isErasing) return
+
+    // 最初のタッチのみを処理（Apple Pencilのタッチ）
+    if (e.touches.length !== 1) return
+
+    const touch = e.touches[0]
+    
+    // Apple Pencilかどうかを判定
+    // @ts-ignore
+    const touchType = touch.touchType || 'direct'
+    
+    // Apple Pencil以外は無視
+    if (touchType !== 'stylus') {
+      return
+    }
 
     e.preventDefault()
     const canvas = drawingCanvasRef.current
     const rect = canvas.getBoundingClientRect()
 
-    const touch = e.touches[0]
     const { x, y } = toCanvasCoordinates(touch.clientX, touch.clientY, rect)
 
     if (isEraserMode && isErasing) {
@@ -587,6 +628,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }
 
   const handleDrawingTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // すべてのタッチが終了したら描画を終了
     if (e.touches.length === 0) {
       if (isEraserMode && isErasing) {
         hookStopErasing((newPaths) => {
