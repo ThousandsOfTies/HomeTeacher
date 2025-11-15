@@ -1,7 +1,7 @@
 // IndexedDB管理ユーティリティ
 
 const DB_NAME = 'HomeTeacherDB';
-const DB_VERSION = 5; // バージョンを上げて採点履歴対応
+const DB_VERSION = 6; // バージョンを上げてBlob対応
 const STORE_NAME = 'pdfFiles';
 const SNS_STORE_NAME = 'snsLinks';
 const GRADING_HISTORY_STORE_NAME = 'gradingHistory';
@@ -10,7 +10,7 @@ export interface PDFFileRecord {
   id: string; // ユニークID (ファイル名 + タイムスタンプ)
   fileName: string;
   thumbnail?: string; // 先頭ページのサムネイル画像（Base64）
-  fileData?: string; // Base64エンコードされたPDFデータ
+  fileData?: Blob; // Blob形式のPDFデータ（v6から）
   lastOpened: number; // タイムスタンプ
   drawings: Record<number, string>; // ページ番号 -> JSON文字列のマップ
 }
@@ -53,6 +53,7 @@ function openDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      const oldVersion = event.oldVersion;
 
       // PDFファイル用オブジェクトストアが存在しない場合は作成
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -72,6 +73,39 @@ function openDB(): Promise<IDBDatabase> {
         historyStore.createIndex('timestamp', 'timestamp', { unique: false });
         historyStore.createIndex('pdfId', 'pdfId', { unique: false });
         historyStore.createIndex('pageNumber', 'pageNumber', { unique: false });
+      }
+
+      // v6へのアップグレード: Base64からBlobへ移行
+      if (oldVersion < 6 && db.objectStoreNames.contains(STORE_NAME)) {
+        const transaction = (event.target as IDBOpenDBRequest).transaction!;
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const getAllRequest = objectStore.getAll();
+
+        getAllRequest.onsuccess = () => {
+          const records = getAllRequest.result as Array<PDFFileRecord & { fileData?: string | Blob }>;
+          console.log(`📦 Base64→Blob移行開始: ${records.length}件のPDF`);
+
+          records.forEach(record => {
+            // fileDataが文字列（Base64）の場合のみ変換
+            if (record.fileData && typeof record.fileData === 'string') {
+              try {
+                // Base64をBlobに変換
+                const binaryString = atob(record.fileData);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
+                record.fileData = new Blob([bytes], { type: 'application/pdf' });
+                objectStore.put(record);
+                console.log(`✅ ${record.fileName} をBlobに変換`);
+              } catch (error) {
+                console.error(`❌ ${record.fileName} の変換失敗:`, error);
+              }
+            }
+          });
+
+          console.log('✅ Base64→Blob移行完了');
+        };
       }
     };
   });

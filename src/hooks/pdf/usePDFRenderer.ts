@@ -33,11 +33,23 @@ export const usePDFRenderer = (
       setIsLoading(true)
       setError(null)
       try {
-        let pdfData: ArrayBuffer | string
+        let pdfData: ArrayBuffer | Uint8Array
 
         if (pdfRecord.fileData) {
           optionsRef.current?.onLoadStart?.()
-          pdfData = `data:application/pdf;base64,${pdfRecord.fileData}`
+
+          // BlobをArrayBufferに変換（v6から）
+          if (pdfRecord.fileData instanceof Blob) {
+            pdfData = await pdfRecord.fileData.arrayBuffer()
+          } else {
+            // 後方互換性: 文字列（Base64）の場合
+            const binaryString = atob(pdfRecord.fileData as string)
+            const bytes = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+            pdfData = bytes
+          }
         } else {
           const errorMsg =
             'PDFデータが見つかりません。\n\n' +
@@ -52,7 +64,7 @@ export const usePDFRenderer = (
         }
 
         console.log('PDFを読み込み中...')
-        const loadingTask = pdfjsLib.getDocument(pdfData)
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData })
         const pdf = await loadingTask.promise
         setPdfDoc(pdf)
         setNumPages(pdf.numPages)

@@ -105,21 +105,14 @@ export const usePDFRecords = () => {
       // サムネイルを生成
       const thumbnail = await generateThumbnail(file)
 
-      // ファイル全体をBase64として保存
+      // ファイル全体をBlobとして保存（v6から）
       const arrayBuffer = await file.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      let binaryString = ''
-      const chunkSize = 0x8000
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length))
-        binaryString += String.fromCharCode.apply(null, Array.from(chunk))
-      }
-      const base64Data = btoa(binaryString)
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' })
 
       const newRecord: PDFFileRecord = {
         id,
         fileName,
-        fileData: base64Data,
+        fileData: blob,
         thumbnail,
         lastOpened: Date.now(),
         drawings: {},
