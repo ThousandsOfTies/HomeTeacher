@@ -168,12 +168,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.canvas-pan-layer {
-  position: relative;
-  transform-origin: 0 0;
-}
-
-.canvas-scale-layer {
+.canvas-layer {
   position: relative;
   transform-origin: 0 0;
 }

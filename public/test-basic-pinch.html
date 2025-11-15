@@ -180,6 +180,15 @@
       }
     }
 
+    // コンテンツの中心座標（ビューポート座標）を取得
+    function getContentCenter() {
+      const rect = content.getBoundingClientRect()
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      }
+    }
+
     container.addEventListener('touchstart', (e) => {
       document.getElementById('touches').textContent = e.touches.length
 
@@ -204,30 +213,36 @@
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
         
-        // 新しい距離と中心を計算
-        const newDistance = getDistance(touch1, touch2)
+        // 指の中心の移動量
         const newCenter = getCenter(touch1, touch2)
+        const panX = newCenter.x - lastCenterX
+        const panY = newCenter.y - lastCenterY
         
-        // ズーム倍率の変化
+        // まずパンを適用
+        translateX += panX
+        translateY += panY
+        
+        // スケール変更
+        const newDistance = getDistance(touch1, touch2)
         const scaleChange = newDistance / lastDistance
-        const oldScale = scale
-        scale = Math.max(0.5, Math.min(5.0, scale * scaleChange))
+        const newScale = Math.max(0.5, Math.min(5.0, scale * scaleChange))
         
-        // コンテンツの現在の中心座標
-        const contentCenter = getContentCenter()
-        
-        // 指の中心からコンテンツ中心へのベクトル
-        const dx = contentCenter.x - lastCenterX
-        const dy = contentCenter.y - lastCenterY
-        
-        // スケール変化による位置調整
-        const scaleFactor = scale / oldScale
-        translateX += dx * (scaleFactor - 1)
-        translateY += dy * (scaleFactor - 1)
-        
-        // パン（指の中心の移動）
-        translateX += newCenter.x - lastCenterX
-        translateY += newCenter.y - lastCenterY
+        if (newScale !== scale) {
+          // 新しい指の中心からコンテンツ中心への距離
+          const rect = content.getBoundingClientRect()
+          const contentCenterX = rect.left + rect.width / 2
+          const contentCenterY = rect.top + rect.height / 2
+          
+          const dx = contentCenterX - newCenter.x
+          const dy = contentCenterY - newCenter.y
+          
+          // スケール変化分だけ距離を調整
+          const factor = newScale / scale - 1
+          translateX -= dx * factor
+          translateY -= dy * factor
+          
+          scale = newScale
+        }
         
         // 前回値を更新
         lastDistance = newDistance

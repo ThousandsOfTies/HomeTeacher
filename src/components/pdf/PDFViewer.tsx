@@ -691,141 +691,83 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }, [pageNum, drawingPaths, addStatusMessage])
 
   /**
-   * ピンチズーム用の状態管理
-   *
-   * useRefを使用して再レンダリングを最小化
-   * - 頻繁なtouchmoveイベント中にDOM再構成が発生すると、イベントが途切れる問題を回避
+   * ピンチズーム用の状態管理（正しい実装）
+   * 
+   * touchstart時の初期値を保存し、touchmoveでは初期値から毎回計算
+   * これにより累積誤差が発生しない
    */
-  const prevPinchDistanceRef = useRef<number | null>(null)
-  const prevPinchCenterRef = useRef<{ x: number; y: number } | null>(null)
-  const prevTouch1Ref = useRef<{ x: number; y: number } | null>(null)
-  const prevTouch2Ref = useRef<{ x: number; y: number } | null>(null)
+  const initialPinchDistanceRef = useRef<number | null>(null)
+  const initialScaleRef = useRef<number>(1)
+  const initialPanOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const pinchCenterRef = useRef<{ x: number; y: number } | null>(null)
 
   /**
-   * 2本指タッチ開始ハンドラ（ピンチズーム・2本指パン用）
-   *
-   * 2本指タッチが開始されたときに、初期状態を記録する
-   * - 2点間の距離（ピンチズームの基準値）
-   * - 2点の中心座標（2本指パンの基準値）
+   * 2本指タッチ開始ハンドラ（ピンチズーム）
    */
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 2) {
       e.preventDefault()
-      const touch1 = e.touches[0]
-      const touch2 = e.touches[1]
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
 
-      // 2点間の距離を計算（ピタゴラスの定理）
-      const dx = touch1.clientX - touch2.clientX
-      const dy = touch1.clientY - touch2.clientY
+      // 2点間の距離
+      const dx = t1.clientX - t2.clientX
+      const dy = t1.clientY - t2.clientY
       const distance = Math.sqrt(dx * dx + dy * dy)
 
-      // 2点の位置を保存（コンテナ相対座標）
-      if (containerRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect()
-        const touch1X = touch1.clientX - containerRect.left
-        const touch1Y = touch1.clientY - containerRect.top
-        const touch2X = touch2.clientX - containerRect.left
-        const touch2Y = touch2.clientY - containerRect.top
-        
-        prevTouch1Ref.current = { x: touch1X, y: touch1Y }
-        prevTouch2Ref.current = { x: touch2X, y: touch2Y }
-        
-        // 初期中心は単純な中点
-        const centerX = (touch1X + touch2X) / 2
-        const centerY = (touch1Y + touch2Y) / 2
-        prevPinchCenterRef.current = { x: centerX, y: centerY }
-      }
+      // 初期値を保存
+      initialPinchDistanceRef.current = distance
+      initialScaleRef.current = zoom
+      initialPanOffsetRef.current = { x: panOffset.x, y: panOffset.y }
 
-      prevPinchDistanceRef.current = distance
+      // ピンチの中心点（ビューポート座標）
+      pinchCenterRef.current = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      }
     }
   }
 
   /**
-   * 2本指タッチ移動ハンドラ（Google Maps方式のピンチズーム + 2本指パン）
-   * useRefで状態管理してDOM再構成を最小化
+   * 2本指タッチ移動ハンドラ（ピンチズーム）
+   * 
+   * 公式: newOrigin = pinchCenter - (pinchCenter - initialOrigin) × (newScale / initialScale)
+   * これにより、ピンチ中心点が指す内容は常に同じ位置に留まる
    */
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 2 || prevPinchDistanceRef.current === null || prevPinchCenterRef.current === null || 
-        !containerRef.current || !prevTouch1Ref.current || !prevTouch2Ref.current) {
+    if (e.touches.length !== 2 || initialPinchDistanceRef.current === null || !pinchCenterRef.current) {
       return
     }
 
     e.preventDefault()
-    const touch1 = e.touches[0]
-    const touch2 = e.touches[1]
-    const containerRect = containerRef.current.getBoundingClientRect()
+    const t1 = e.touches[0]
+    const t2 = e.touches[1]
 
-    // 現在の2点間の距離を計算
-    const dx = touch1.clientX - touch2.clientX
-    const dy = touch1.clientY - touch2.clientY
+    // 現在の距離
+    const dx = t1.clientX - t2.clientX
+    const dy = t1.clientY - t2.clientY
     const currentDistance = Math.sqrt(dx * dx + dy * dy)
 
-    // 2本指の位置（コンテナ相対座標）
-    const touch1X = touch1.clientX - containerRect.left
-    const touch1Y = touch1.clientY - containerRect.top
-    const touch2X = touch2.clientX - containerRect.left
-    const touch2Y = touch2.clientY - containerRect.top
+    // スケール比率
+    const ratio = currentDistance / initialPinchDistanceRef.current
+    const newZoom = Math.max(0.5, Math.min(5.0, initialScaleRef.current * ratio))
 
-    // 各指の移動量を計算
-    const move1X = touch1X - prevTouch1Ref.current.x
-    const move1Y = touch1Y - prevTouch1Ref.current.y
-    const move2X = touch2X - prevTouch2Ref.current.x
-    const move2Y = touch2Y - prevTouch2Ref.current.y
-    
-    const distance1 = Math.sqrt(move1X * move1X + move1Y * move1Y)
-    const distance2 = Math.sqrt(move2X * move2X + move2Y * move2Y)
-    
-    // 移動量の合計
-    const totalMove = distance1 + distance2
-    
-    // 中心位置を移動量の比率で計算
-    let currentCenterX: number
-    let currentCenterY: number
-    
-    if (totalMove < 0.1) {
-      currentCenterX = (touch1X + touch2X) / 2
-      currentCenterY = (touch1Y + touch2Y) / 2
-    } else {
-      const ratio = distance2 / totalMove
-      currentCenterX = touch1X * ratio + touch2X * (1 - ratio)
-      currentCenterY = touch1Y * ratio + touch2Y * (1 - ratio)
-    }
+    // 現在の指の中心位置
+    const currentPinchCenterX = (t1.clientX + t2.clientX) / 2
+    const currentPinchCenterY = (t1.clientY + t2.clientY) / 2
 
-    // ピンチズーム処理
-    const distanceRatio = currentDistance / prevPinchDistanceRef.current
-    const ZOOM_THRESHOLD = 0.01
-    
-    if (Math.abs(distanceRatio - 1) > ZOOM_THRESHOLD) {
-      const oldZoom = zoom
-      const newZoom = Math.max(0.5, Math.min(5, oldZoom * distanceRatio))
+    // ピンチ開始時の中心点を基準にした位置計算
+    const newOriginX = pinchCenterRef.current.x - 
+      (pinchCenterRef.current.x - initialPanOffsetRef.current.x) * (newZoom / initialScaleRef.current)
+    const newOriginY = pinchCenterRef.current.y - 
+      (pinchCenterRef.current.y - initialPanOffsetRef.current.y) * (newZoom / initialScaleRef.current)
 
-      const contentX = (currentCenterX - panOffset.x) / oldZoom
-      const contentY = (currentCenterY - panOffset.y) / oldZoom
+    // 指の移動によるパン
+    const panX = currentPinchCenterX - pinchCenterRef.current.x
+    const panY = currentPinchCenterY - pinchCenterRef.current.y
 
-      const newOffsetX = currentCenterX - contentX * newZoom
-      const newOffsetY = currentCenterY - contentY * newZoom
-
-      setPanOffset({ x: newOffsetX, y: newOffsetY })
-      setZoom(newZoom)
-      prevPinchDistanceRef.current = currentDistance
-    }
-
-    // 2本指パン処理
-    const centerDx = currentCenterX - prevPinchCenterRef.current.x
-    const centerDy = currentCenterY - prevPinchCenterRef.current.y
-    const PAN_THRESHOLD = 1
-    
-    if (Math.abs(centerDx) > PAN_THRESHOLD || Math.abs(centerDy) > PAN_THRESHOLD) {
-      setPanOffset(prev => ({
-        x: prev.x + centerDx,
-        y: prev.y + centerDy
-      }))
-    }
-
-    // 前回値を更新（毎回更新して累積誤差を防ぐ）
-    prevTouch1Ref.current = { x: touch1X, y: touch1Y }
-    prevTouch2Ref.current = { x: touch2X, y: touch2Y }
-    prevPinchCenterRef.current = { x: currentCenterX, y: currentCenterY }
+    setPanOffset({ x: newOriginX + panX, y: newOriginY + panY })
+    setZoom(newZoom)
   }
 
   /**
@@ -833,11 +775,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
    */
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length < 2) {
-      prevPinchDistanceRef.current = null
-      prevPinchCenterRef.current = null
-      prevTouch1Ref.current = null
-      prevTouch2Ref.current = null
-      setDebugMarkers([])
+      initialPinchDistanceRef.current = null
+      pinchCenterRef.current = null
     }
   }
 
@@ -1566,48 +1505,41 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           visibility: isRestoring ? 'hidden' : 'visible'
         }}>
           <div
-            className="canvas-pan-layer"
+            className="canvas-layer"
             style={{
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
-              transition: 'none' // isPanning ? 'none' : 'transform 0.1s ease-out'
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              transition: 'none'
             }}
           >
-            <div
-              className="canvas-scale-layer"
+            <canvas ref={canvasRef} className="pdf-canvas" />
+            <canvas
+              ref={drawingCanvasRef}
+              className="drawing-canvas"
               style={{
-                transform: `scale(${zoom})`,
-                transformOrigin: '0 0',
-                transition: 'none' // isPanning ? 'none' : 'transform 0.1s ease-out'
+                cursor: isDrawingMode && !isCtrlPressed
+                  ? ICON_SVG.penCursor(penColor)
+                  : isEraserMode
+                  ? ICON_SVG.eraserCursor
+                  : 'default',
+                pointerEvents: (isDrawingMode || isEraserMode) && !isCtrlPressed ? 'auto' : 'none',
+                touchAction: 'none'
               }}
-            >
-              <canvas ref={canvasRef} className="pdf-canvas" />
-              <canvas
-                ref={drawingCanvasRef}
-                className="drawing-canvas"
-                style={{
-                  cursor: isDrawingMode && !isCtrlPressed
-                    ? ICON_SVG.penCursor(penColor)
-                    : isEraserMode
-                    ? ICON_SVG.eraserCursor
-                    : 'default',
-                  pointerEvents: (isDrawingMode || isEraserMode) && !isCtrlPressed ? 'auto' : 'none',
-                  touchAction: 'none'
-                }}
-                onMouseDown={isEraserMode ? startErasing : startDrawing}
-                onMouseMove={isEraserMode ? continueErasing : draw}
-                onMouseUp={isEraserMode ? stopErasing : stopDrawing}
-                onMouseLeave={isEraserMode ? stopErasing : stopDrawing}
-                onTouchStart={handleDrawingTouchStart}
-                onTouchMove={handleDrawingTouchMove}
-                onTouchEnd={handleDrawingTouchEnd}
-              />
-              <canvas
-                ref={selectionCanvasRef}
-                className="selection-canvas"
-                style={{
-                  cursor: isSelectionMode ? 'crosshair' : 'default',
-                  pointerEvents: isSelectionMode ? 'auto' : 'none',
-                  touchAction: 'none'
+              onMouseDown={isEraserMode ? startErasing : startDrawing}
+              onMouseMove={isEraserMode ? continueErasing : draw}
+              onMouseUp={isEraserMode ? stopErasing : stopDrawing}
+              onMouseLeave={isEraserMode ? stopErasing : stopDrawing}
+              onTouchStart={handleDrawingTouchStart}
+              onTouchMove={handleDrawingTouchMove}
+              onTouchEnd={handleDrawingTouchEnd}
+            />
+            <canvas
+              ref={selectionCanvasRef}
+              className="selection-canvas"
+              style={{
+                cursor: isSelectionMode ? 'crosshair' : 'default',
+                pointerEvents: isSelectionMode ? 'auto' : 'none',
+                touchAction: 'none'
                 }}
                 onMouseDown={startSelection}
                 onMouseMove={updateSelection}
@@ -1637,7 +1569,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                   hookFinishSelection(canvasRef.current, drawingCanvasRef.current)
                 }}
               />
-            </div>
           </div>
         </div>
 
