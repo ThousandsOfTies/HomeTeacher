@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transform Order Test</title>
+  <style>
+    body {
+      margin: 50px;
+      font-family: monospace;
+    }
+    .container {
+      position: relative;
+      width: 500px;
+      height: 500px;
+      border: 2px solid black;
+      background: #f0f0f0;
+    }
+    .parent {
+      position: relative;
+      transform-origin: 0 0;
+    }
+    .child {
+      position: relative;
+      transform-origin: 0 0;
+    }
+    .box {
+      width: 100px;
+      height: 100px;
+      background: red;
+    }
+    .marker {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: blue;
+      border-radius: 50%;
+      transform: translate(-5px, -5px);
+    }
+  </style>
+</head>
+<body>
+  <h1>Transform Order Test</h1>
+  <p>Red box starts at (0, 0)</p>
+  <p>Blue marker shows where (50, 50) on the red box ends up</p>
+  
+  <h2>Test 1: translate then scale</h2>
+  <div class="container">
+    <div class="parent" style="transform: translate(100px, 100px);">
+      <div class="child" style="transform: scale(2);">
+        <div class="box"></div>
+      </div>
+    </div>
+    <div class="marker" id="marker1"></div>
+  </div>
+  <p id="result1"></p>
+  
+  <script>
+    // Test 1: parent translate(100, 100), child scale(2)
+    // Point (50, 50) on the box
+    // If scale first: (50 * 2, 50 * 2) = (100, 100), then + translate = (200, 200)
+    // If translate first: (50, 50) + translate = (150, 150), then * scale = (300, 300)
+    
+    const parent1 = document.querySelector('.parent');
+    const box1 = parent1.querySelector('.box');
+    const rect1 = box1.getBoundingClientRect();
+    const marker1 = document.getElementById('marker1');
+    
+    // Mark the point (50, 50) on the box (center)
+    const boxCenterX = rect1.left + 50 * 2; // 50px on original, but scaled by 2
+    const boxCenterY = rect1.top + 50 * 2;
+    
+    marker1.style.left = boxCenterX + 'px';
+    marker1.style.top = boxCenterY + 'px';
+    
+    document.getElementById('result1').textContent = 
+      `Box top-left: (${rect1.left}, ${rect1.top}), ` +
+      `Box center (50,50): (${boxCenterX}, ${boxCenterY})`;
+    
+    // Expected:
+    // - If scale first, then translate: (50*2, 50*2) + (100, 100) = (200, 200)
+    // - If translate first, then scale: Not applicable (translate is on parent)
+    
+    // With nested structure (parent translate, child scale):
+    // The transform is applied inside-out (child first, then parent)
+    // So: scale(2) on (50, 50) = (100, 100)
+    //     then translate(100, 100) = (200, 200)
+  </script>
+</body>
+</html>
