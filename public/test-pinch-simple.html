@@ -205,21 +205,15 @@
     const BASE_WIDTH = 600
     const BASE_HEIGHT = 800
 
-    // PDFコンテンツを描画する関数（scale倍で描画）
-    function renderPDFContent(targetScale) {
-      // キャンバスサイズを scale に合わせる
-      const scaledWidth = BASE_WIDTH * targetScale
-      const scaledHeight = BASE_HEIGHT * targetScale
-      
-      canvas.width = scaledWidth
-      canvas.height = scaledHeight
+    // PDFコンテンツを描画する関数（常にBASEサイズで描画）
+    function renderPDFContent() {
+      // キャンバスサイズは常に固定
+      canvas.width = BASE_WIDTH
+      canvas.height = BASE_HEIGHT
       
       // 描画キャンバスも同じサイズに
-      drawingCanvas.width = scaledWidth
-      drawingCanvas.height = scaledHeight
-      
-      // スケールに合わせて描画
-      ctx.scale(targetScale, targetScale)
+      drawingCanvas.width = BASE_WIDTH
+      drawingCanvas.height = BASE_HEIGHT
       
       // 白背景
       ctx.fillStyle = 'white'
@@ -272,11 +266,7 @@
       ctx.lineWidth = 2
       ctx.strokeRect(0, 0, BASE_WIDTH, BASE_HEIGHT)
       
-      // スケールをリセット
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      
-      // 描画キャンバスにテスト描画（赤い×マーク）- スケール適用
-      drawingCtx.scale(targetScale, targetScale)
+      // 描画キャンバスにテスト描画（赤い×マーク）
       drawingCtx.strokeStyle = 'red'
       drawingCtx.lineWidth = 3
       drawingCtx.beginPath()
@@ -292,12 +282,11 @@
       drawingCtx.beginPath()
       drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
       drawingCtx.stroke()
-      drawingCtx.setTransform(1, 0, 0, 1, 0, 0)
     }
 
     // 初期描画
     async function createSamplePDF() {
-      renderPDFContent(1.0)
+      renderPDFContent()
       
       console.log('✅ Sample PDF created:', canvas.width, 'x', canvas.height)
       console.log('✅ Drawing layer added with test marks')
@@ -310,25 +299,12 @@
 
     // 再レンダリング関数（操作終了後に呼ばれる）
     function rerenderAtCurrentScale() {
-      // レンダリング前のキャンバスサイズとスケールを保存
-      const oldCanvasWidth = canvas.width
-      const oldCanvasHeight = canvas.height
-      const oldScale = scale
+      console.log('🔄 Re-rendering at scale:', scale.toFixed(2))
       
-      // キャンバス中心のビューポート座標を計算（transformスケール適用後の座標）
-      const canvasCenterX = originX + (oldCanvasWidth * oldScale / 2)
-      const canvasCenterY = originY + (oldCanvasHeight * oldScale / 2)
+      // 単純に再描画（座標はそのまま、scaleもそのまま）
+      renderPDFContent()
       
-      // 新しいスケールでレンダリング（キャンバスサイズが BASE_WIDTH*scale になる）
-      renderPDFContent(oldScale)
-      
-      // レンダリング後、キャンバスサイズが変わったので origin を調整
-      // 新しいキャンバスの中心が同じビューポート座標になるように
-      originX = canvasCenterX - (canvas.width / 2)
-      originY = canvasCenterY - (canvas.height / 2)
-      
-      // Transform の scale を 1.0 に戻す（キャンバス自体が既にスケール済み）
-      scale = 1.0
+      // transform を再適用（座標もスケールも変わらない）
       applyTransform()
     }
 
