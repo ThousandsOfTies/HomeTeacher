@@ -210,38 +210,30 @@
     const CANVAS_WIDTH = BASE_WIDTH * RENDER_SCALE
     const CANVAS_HEIGHT = BASE_HEIGHT * RENDER_SCALE
 
-    // サンプルPDFのBase64データ（1ページの簡単なPDF）
-    const SAMPLE_PDF_BASE64 = `
-JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRv
-YmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAw
-IG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1BhcmVudCAyIDAgUi9SZXNv
-dXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBv
-YmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2Jq
-CjUgMCBvYmoKPDwvTGVuZ3RoIDI4MD4+CnN0cmVhbQpCVAovRjEgMzYgVGYKNTAgNzAwIFRkCijm
-lbDlrablg4nlg6rjg6spIFRqCkVUCkJUCi9GMSAyNCBUZgo1MCA2MDAgVGQKKOWVj+mhjO+8ke+8
-miDmrKHjga7oqIjnrpfjgpLjgZfjgarjgZXjgYQpIFRqCkVUCkJUCi9GMSAzMiBUZgo4MCA1MDAg
-VGQKKDEyICsgMzQgPSA/KSBUagpFVApCVAovRjEgMjQgVGYKNTAgNDAwIFRkCijllY/poYzvvJLv
-vJog5qyh44Gu5byP44KS6Kej44GN44Gq44GV44GEKSBUagpFVApCVAovRjEgMzIgVGYKODAgMzAw
-IFRkCih4ICsgNSA9IDEzKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAw
-MDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAw
-MDAxMjEgMDAwMDAgbiAKMDAwMDAwMDI0NyAwMDAwMCBuIAowMDAwMDAwMzI0IDAwMDAwIG4gCnRy
-YWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNjcyCiUlRU9GCg==
-`.trim()
+    // サンプルPDFのBase64データ（最小限のPDF）
+    const SAMPLE_PDF_BASE64 = 'JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1BhcmVudCAyIDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2JqCjUgMCBvYmoKPDwvTGVuZ3RoIDQ0Pj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo1MCA3MDAgVGQKKEhlbGxvIFBERiEpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNjQgMDAwMDAgbiAKMDAwMDAwMDEyMSAwMDAwMCBuIAowMDAwMDAwMjQ3IDAwMDAwIG4gCjAwMDAwMDAzMjQgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDYvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgo0MTgKJSVFT0YK'
 
     let pdfDoc = null
     let currentPage = null
 
     // PDF.jsでPDFを描画する関数（3倍サイズで高解像度レンダリング）
     async function renderPDFContent() {
-      if (!pdfDoc) {
-        // Base64からPDFを読み込み
-        const loadingTask = pdfjsLib.getDocument({ data: atob(SAMPLE_PDF_BASE64) })
-        pdfDoc = await loadingTask.promise
-        console.log('✅ PDF loaded:', pdfDoc.numPages, 'pages')
-      }
-      
-      // 1ページ目を取得
-      currentPage = await pdfDoc.getPage(1)
+      try {
+        if (!pdfDoc) {
+          // Base64からPDFを読み込み
+          const pdfData = atob(SAMPLE_PDF_BASE64)
+          const uint8Array = new Uint8Array(pdfData.length)
+          for (let i = 0; i < pdfData.length; i++) {
+            uint8Array[i] = pdfData.charCodeAt(i)
+          }
+          
+          const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+          pdfDoc = await loadingTask.promise
+          console.log('✅ PDF loaded:', pdfDoc.numPages, 'pages')
+        }
+        
+        // 1ページ目を取得
+        currentPage = await pdfDoc.getPage(1)
       
       // 3倍スケールのビューポートを取得
       const viewport = currentPage.getViewport({ scale: RENDER_SCALE })
@@ -259,9 +251,6 @@ YWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNjcyCiUlRU9GCg==
         canvasContext: ctx,
         viewport: viewport
       }
-      
-      await currentPage.render(renderContext).promise
-      console.log('✅ PDF rendered at', viewport.width, 'x', viewport.height)
       
       await currentPage.render(renderContext).promise
       console.log('✅ PDF rendered at', viewport.width, 'x', viewport.height)
@@ -285,6 +274,10 @@ YWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNjcyCiUlRU9GCg==
       drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
       drawingCtx.stroke()
       drawingCtx.restore()
+      } catch (error) {
+        console.error('PDF render error:', error)
+        throw error
+      }
     }
 
     // 初期描画
