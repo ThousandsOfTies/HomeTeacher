@@ -234,46 +234,46 @@
         
         // 1ページ目を取得
         currentPage = await pdfDoc.getPage(1)
-      
-      // 3倍スケールのビューポートを取得
-      const viewport = currentPage.getViewport({ scale: RENDER_SCALE })
-      
-      // キャンバスサイズを設定
-      canvas.width = viewport.width
-      canvas.height = viewport.height
-      
-      // 描画キャンバスも同じサイズに
-      drawingCanvas.width = viewport.width
-      drawingCanvas.height = viewport.height
-      
-      // PDFページをレンダリング
-      const renderContext = {
-        canvasContext: ctx,
-        viewport: viewport
-      }
-      
-      await currentPage.render(renderContext).promise
-      console.log('✅ PDF rendered at', viewport.width, 'x', viewport.height)
-      
-      // 描画キャンバスにテスト描画（赤い×マーク）- 3倍スケールで描画
-      drawingCtx.save()
-      drawingCtx.scale(RENDER_SCALE, RENDER_SCALE)
-      drawingCtx.strokeStyle = 'red'
-      drawingCtx.lineWidth = 3
-      drawingCtx.beginPath()
-      drawingCtx.moveTo(100, 150)
-      drawingCtx.lineTo(150, 200)
-      drawingCtx.moveTo(150, 150)
-      drawingCtx.lineTo(100, 200)
-      drawingCtx.stroke()
-      
-      // 青い丸
-      drawingCtx.strokeStyle = 'blue'
-      drawingCtx.lineWidth = 3
-      drawingCtx.beginPath()
-      drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
-      drawingCtx.stroke()
-      drawingCtx.restore()
+        
+        // 3倍スケールのビューポートを取得
+        const viewport = currentPage.getViewport({ scale: RENDER_SCALE })
+        
+        // キャンバスサイズを設定
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        
+        // 描画キャンバスも同じサイズに
+        drawingCanvas.width = viewport.width
+        drawingCanvas.height = viewport.height
+        
+        // PDFページをレンダリング
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: viewport
+        }
+        
+        await currentPage.render(renderContext).promise
+        console.log('✅ PDF rendered at', viewport.width, 'x', viewport.height)
+        
+        // 描画キャンバスにテスト描画（赤い×マーク）- 3倍スケールで描画
+        drawingCtx.save()
+        drawingCtx.scale(RENDER_SCALE, RENDER_SCALE)
+        drawingCtx.strokeStyle = 'red'
+        drawingCtx.lineWidth = 3
+        drawingCtx.beginPath()
+        drawingCtx.moveTo(100, 150)
+        drawingCtx.lineTo(150, 200)
+        drawingCtx.moveTo(150, 150)
+        drawingCtx.lineTo(100, 200)
+        drawingCtx.stroke()
+        
+        // 青い丸
+        drawingCtx.strokeStyle = 'blue'
+        drawingCtx.lineWidth = 3
+        drawingCtx.beginPath()
+        drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
+        drawingCtx.stroke()
+        drawingCtx.restore()
       } catch (error) {
         console.error('PDF render error:', error)
         throw error
