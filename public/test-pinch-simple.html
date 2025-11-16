@@ -210,71 +210,64 @@
     const CANVAS_WIDTH = BASE_WIDTH * RENDER_SCALE
     const CANVAS_HEIGHT = BASE_HEIGHT * RENDER_SCALE
 
-    // PDFコンテンツを描画する関数（3倍サイズで高解像度レンダリング）
-    function renderPDFContent() {
-      // キャンバスサイズを3倍で固定
-      canvas.width = CANVAS_WIDTH
-      canvas.height = CANVAS_HEIGHT
+    // サンプルPDFのBase64データ（1ページの簡単なPDF）
+    const SAMPLE_PDF_BASE64 = `
+JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRv
+YmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAw
+IG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1BhcmVudCAyIDAgUi9SZXNv
+dXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBv
+YmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2Jq
+CjUgMCBvYmoKPDwvTGVuZ3RoIDI4MD4+CnN0cmVhbQpCVAovRjEgMzYgVGYKNTAgNzAwIFRkCijm
+lbDlrablg4nlg6rjg6spIFRqCkVUCkJUCi9GMSAyNCBUZgo1MCA2MDAgVGQKKOWVj+mhjO+8ke+8
+miDmrKHjga7oqIjnrpfjgpLjgZfjgarjgZXjgYQpIFRqCkVUCkJUCi9GMSAzMiBUZgo4MCA1MDAg
+VGQKKDEyICsgMzQgPSA/KSBUagpFVApCVAovRjEgMjQgVGYKNTAgNDAwIFRkCijllY/poYzvvJLv
+vJog5qyh44Gu5byP44KS6Kej44GN44Gq44GV44GEKSBUagpFVApCVAovRjEgMzIgVGYKODAgMzAw
+IFRkCih4ICsgNSA9IDEzKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAw
+MDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAw
+MDAxMjEgMDAwMDAgbiAKMDAwMDAwMDI0NyAwMDAwMCBuIAowMDAwMDAwMzI0IDAwMDAwIG4gCnRy
+YWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNjcyCiUlRU9GCg==
+`.trim()
+
+    let pdfDoc = null
+    let currentPage = null
+
+    // PDF.jsでPDFを描画する関数（3倍サイズで高解像度レンダリング）
+    async function renderPDFContent() {
+      if (!pdfDoc) {
+        // Base64からPDFを読み込み
+        const loadingTask = pdfjsLib.getDocument({ data: atob(SAMPLE_PDF_BASE64) })
+        pdfDoc = await loadingTask.promise
+        console.log('✅ PDF loaded:', pdfDoc.numPages, 'pages')
+      }
+      
+      // 1ページ目を取得
+      currentPage = await pdfDoc.getPage(1)
+      
+      // 3倍スケールのビューポートを取得
+      const viewport = currentPage.getViewport({ scale: RENDER_SCALE })
+      
+      // キャンバスサイズを設定
+      canvas.width = viewport.width
+      canvas.height = viewport.height
       
       // 描画キャンバスも同じサイズに
-      drawingCanvas.width = CANVAS_WIDTH
-      drawingCanvas.height = CANVAS_HEIGHT
+      drawingCanvas.width = viewport.width
+      drawingCanvas.height = viewport.height
       
-      // 3倍スケールで描画
-      ctx.scale(RENDER_SCALE, RENDER_SCALE)
-      
-      // 白背景
-      ctx.fillStyle = 'white'
-      ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT)
-      
-      // タイトル
-      ctx.fillStyle = 'black'
-      ctx.font = 'bold 32px sans-serif'
-      ctx.fillText('数学ドリル', 50, 60)
-      
-      // 問題1
-      ctx.font = '24px sans-serif'
-      ctx.fillText('問題1: 次の計算をしなさい', 50, 120)
-      ctx.font = '32px serif'
-      ctx.fillText('12 + 34 = ?', 80, 180)
-      
-      // 問題2
-      ctx.font = '24px sans-serif'
-      ctx.fillText('問題2: 次の式を解きなさい', 50, 280)
-      ctx.font = '32px serif'
-      ctx.fillText('x + 5 = 13', 80, 340)
-      ctx.fillText('x = ?', 80, 390)
-      
-      // 問題3
-      ctx.font = '24px sans-serif'
-      ctx.fillText('問題3: 円の面積を求めなさい', 50, 480)
-      ctx.font = '24px serif'
-      ctx.fillText('半径 r = 5 cm', 80, 530)
-      ctx.font = '32px serif'
-      ctx.fillText('面積 = ?', 80, 580)
-      
-      // グリッド線（マス目）
-      ctx.strokeStyle = '#eee'
-      ctx.lineWidth = 1
-      for (let i = 0; i < BASE_WIDTH; i += 50) {
-        ctx.beginPath()
-        ctx.moveTo(i, 0)
-        ctx.lineTo(i, BASE_HEIGHT)
-        ctx.stroke()
-      }
-      for (let i = 0; i < BASE_HEIGHT; i += 50) {
-        ctx.beginPath()
-        ctx.moveTo(0, i)
-        ctx.lineTo(BASE_WIDTH, i)
-        ctx.stroke()
+      // PDFページをレンダリング
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
       }
       
-      // 枠線
-      ctx.strokeStyle = '#333'
-      ctx.lineWidth = 2
-      ctx.strokeRect(0, 0, BASE_WIDTH, BASE_HEIGHT)
+      await currentPage.render(renderContext).promise
+      console.log('✅ PDF rendered at', viewport.width, 'x', viewport.height)
+      
+      await currentPage.render(renderContext).promise
+      console.log('✅ PDF rendered at', viewport.width, 'x', viewport.height)
       
       // 描画キャンバスにテスト描画（赤い×マーク）- 3倍スケールで描画
+      drawingCtx.save()
       drawingCtx.scale(RENDER_SCALE, RENDER_SCALE)
       drawingCtx.strokeStyle = 'red'
       drawingCtx.lineWidth = 3
@@ -291,11 +284,12 @@
       drawingCtx.beginPath()
       drawingCtx.arc(120, 400, 30, 0, Math.PI * 2)
       drawingCtx.stroke()
+      drawingCtx.restore()
     }
 
     // 初期描画
     async function createSamplePDF() {
-      renderPDFContent()
+      await renderPDFContent()
       
       console.log('✅ Sample PDF created (3x):', canvas.width, 'x', canvas.height)
       console.log('✅ Drawing layer added with test marks')
@@ -312,11 +306,11 @@
     }
 
     // 再レンダリング関数（操作終了後に呼ばれる）
-    function rerenderAtCurrentScale() {
+    async function rerenderAtCurrentScale() {
       console.log('🔄 Re-rendering at scale:', scale.toFixed(2))
       
       // 単純に再描画（座標はそのまま、scaleもそのまま）
-      renderPDFContent()
+      await renderPDFContent()
       
       // transform を再適用（座標もスケールも変わらない）
       applyTransform()
@@ -448,11 +442,15 @@
     // サンプルPDFを表示
     createSamplePDF().catch(err => {
       console.error('Canvas draw error:', err)
+    // サンプルPDFを表示
+    createSamplePDF().catch(err => {
+      console.error('PDF render error:', err)
     })
     
-    console.log('✅ 正しい基本構造のピンチズーム + サンプル問題')
+    console.log('✅ 正しい基本構造のピンチズーム + PDF.js')
     console.log('📐 transform-origin: 0 0')
     console.log('📱 touchstartで初期値保存 → touchmoveで初期値から計算')
+    console.log('🎨 3倍プリレンダリング戦略')
   </script>
 </body>
 </html>
