@@ -201,19 +201,27 @@
     const drawingCanvas = document.getElementById('drawing-canvas')
     const drawingCtx = drawingCanvas.getContext('2d')
 
-    // PDFの基本サイズ（1倍時）
+    // PDFの基本サイズ（画面表示時）
     const BASE_WIDTH = 600
     const BASE_HEIGHT = 800
+    
+    // レンダリング倍率（高解像度化）
+    const RENDER_SCALE = 3.0
+    const CANVAS_WIDTH = BASE_WIDTH * RENDER_SCALE
+    const CANVAS_HEIGHT = BASE_HEIGHT * RENDER_SCALE
 
-    // PDFコンテンツを描画する関数（常にBASEサイズで描画）
+    // PDFコンテンツを描画する関数（3倍サイズで高解像度レンダリング）
     function renderPDFContent() {
-      // キャンバスサイズは常に固定
-      canvas.width = BASE_WIDTH
-      canvas.height = BASE_HEIGHT
+      // キャンバスサイズを3倍で固定
+      canvas.width = CANVAS_WIDTH
+      canvas.height = CANVAS_HEIGHT
       
       // 描画キャンバスも同じサイズに
-      drawingCanvas.width = BASE_WIDTH
-      drawingCanvas.height = BASE_HEIGHT
+      drawingCanvas.width = CANVAS_WIDTH
+      drawingCanvas.height = CANVAS_HEIGHT
+      
+      // 3倍スケールで描画
+      ctx.scale(RENDER_SCALE, RENDER_SCALE)
       
       // 白背景
       ctx.fillStyle = 'white'
@@ -266,7 +274,8 @@
       ctx.lineWidth = 2
       ctx.strokeRect(0, 0, BASE_WIDTH, BASE_HEIGHT)
       
-      // 描画キャンバスにテスト描画（赤い×マーク）
+      // 描画キャンバスにテスト描画（赤い×マーク）- 3倍スケールで描画
+      drawingCtx.scale(RENDER_SCALE, RENDER_SCALE)
       drawingCtx.strokeStyle = 'red'
       drawingCtx.lineWidth = 3
       drawingCtx.beginPath()
@@ -288,12 +297,17 @@
     async function createSamplePDF() {
       renderPDFContent()
       
-      console.log('✅ Sample PDF created:', canvas.width, 'x', canvas.height)
+      console.log('✅ Sample PDF created (3x):', canvas.width, 'x', canvas.height)
       console.log('✅ Drawing layer added with test marks')
       
-      // 初期位置を画面中央に設定
-      originX = window.innerWidth / 2 - canvas.width / 2
-      originY = window.innerHeight / 2 - canvas.height / 2
+      // 初期スケールを 1/3 に設定（3倍レンダリングを等倍表示）
+      scale = 1.0 / RENDER_SCALE
+      
+      // 初期位置を画面中央に設定（実際の表示サイズで計算）
+      const displayWidth = canvas.width * scale
+      const displayHeight = canvas.height * scale
+      originX = window.innerWidth / 2 - displayWidth / 2
+      originY = window.innerHeight / 2 - displayHeight / 2
       applyTransform()
     }
 
@@ -308,8 +322,8 @@
       applyTransform()
     }
 
-    // 変換の状態
-    let scale = 1.0
+    // 変換の状態（初期値は 1/3 = 0.333...）
+    let scale = 1.0 / 3.0
     let originX = 0
     let originY = 0
 
@@ -368,9 +382,9 @@
         // 現在の距離
         const currentDistance = getDistance(t1, t2)
         
-        // スケール比率
+        // スケール比率（最小 1/3 = 0.33、最大 1.0 = 等倍）
         const ratio = currentDistance / initialDistance
-        scale = Math.max(0.5, Math.min(5.0, initialScale * ratio))
+        scale = Math.max(1.0 / RENDER_SCALE, Math.min(1.0, initialScale * ratio))
         
         // 現在の指の中心位置（ビューポート座標）
         const currentPinchCenterX = (t1.clientX + t2.clientX) / 2
@@ -417,10 +431,10 @@
         const mouseX = e.clientX
         const mouseY = e.clientY
         
-        // ズーム量
+        // ズーム量（最小 1/3、最大 1.0）
         const delta = -e.deltaY * 0.002
         const oldScale = scale
-        scale = Math.max(0.5, Math.min(5.0, scale * (1 + delta)))
+        scale = Math.max(1.0 / RENDER_SCALE, Math.min(1.0, scale * (1 + delta)))
         
         // マウス位置を中心にズーム
         // 公式: newOrigin = mousePos - (mousePos - oldOrigin) * (newScale / oldScale)
