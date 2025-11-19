@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>時間切れ - HomeTeacher</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 90%;
+    }
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    h1 {
+      font-size: 36px;
+      margin: 0 0 16px 0;
+    }
+    .sns-name {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+      color: #ffd700;
+    }
+    p {
+      font-size: 18px;
+      line-height: 1.6;
+      margin: 16px 0;
+      opacity: 0.9;
+    }
+    .instruction {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+    }
+    .small {
+      font-size: 14px;
+      margin-top: 20px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">⏰</div>
+    <h1 id="title">カウントダウン中</h1>
+    <div class="sns-name" id="snsName">SNS</div>
+    <p id="timeLimit">利用時間を計測しています</p>
+    <div id="countdown" style="font-size: 64px; font-weight: bold; margin: 30px 0; color: #ffd700;">--:--</div>
+    <div class="instruction" id="instruction" style="display: none;">
+      📱 SNSタブを閉じて<br>
+      🔄 このアプリを再起動してください
+    </div>
+    <p class="small" id="warningMessage" style="display: none;">警告音が鳴り続けます</p>
+  </div>
+  
+  <script>
+    // URLパラメータから情報を取得
+    const params = new URLSearchParams(window.location.search);
+    const snsName = params.get('name') || 'SNS';
+    const timeLimitMinutes = parseInt(params.get('time') || '30');
+    const startTime = parseInt(params.get('startTime') || Date.now());
+
+    document.getElementById('snsName').textContent = snsName;
+    document.getElementById('timeLimit').textContent = `制限時間: ${timeLimitMinutes}分`;
+
+    // カウントダウンタイマー
+    const countdownElement = document.getElementById('countdown');
+    const titleElement = document.getElementById('title');
+    const instructionElement = document.getElementById('instruction');
+    const warningMessageElement = document.getElementById('warningMessage');
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const remaining = (timeLimitMinutes * 60 * 1000) - elapsed;
+
+      if (remaining <= 0) {
+        // 時間切れ
+        countdownElement.textContent = '00:00';
+        countdownElement.style.color = '#ff4444';
+        titleElement.textContent = '閲覧時間終了';
+        instructionElement.style.display = 'block';
+        warningMessageElement.style.display = 'block';
+        document.getElementById('timeLimit').textContent = `${timeLimitMinutes}分の利用時間が終了しました`;
+
+        // アラーム音を再生
+        playWarningSound();
+        return;
+      }
+
+      // 残り時間を表示（MM:SS形式）
+      const remainingSeconds = Math.ceil(remaining / 1000);
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      countdownElement.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      // 残り30秒以下で赤色に
+      if (remaining <= 30000) {
+        countdownElement.style.color = '#ff4444';
+      }
+
+      // 1秒ごとに更新
+      setTimeout(updateCountdown, 1000);
+    };
+
+    // カウントダウン開始
+    updateCountdown();
+
+    // AudioContextで警告音を生成・ループ再生
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let isPlaying = false;
+
+    function playWarningSound() {
+      if (isPlaying) return;
+      isPlaying = true;
+
+      const playNote = (frequency, startTime, duration) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine'; // やさしい音
+
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+
+      const playSequence = () => {
+        const now = audioContext.currentTime;
+        // ボロンボロン系の音（下降音階）
+        playNote(880, now, 0.3);        // A5
+        playNote(659.25, now + 0.35, 0.3); // E5
+        playNote(523.25, now + 0.7, 0.5);  // C5
+
+        // 3秒ごとに繰り返し
+        setTimeout(playSequence, 3000);
+      };
+
+      playSequence();
+    }
+
+    console.log('⏱️ カウントダウン開始:', { snsName, timeLimitMinutes, startTime });
+  </script>
+</body>
+</html>
