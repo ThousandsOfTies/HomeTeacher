@@ -160,6 +160,8 @@
     const timeLimitMinutes = parseInt(params.get('time') || '30');
     const snsLinksJson = params.get('snsLinks');
 
+    console.log('📱 URLパラメータ:', { timeLimitMinutes, snsLinksJson });
+
     document.getElementById('timeLimit').textContent = `制限時間: ${timeLimitMinutes}分`;
 
     // SNSリンクをパース
@@ -167,14 +169,21 @@
     if (snsLinksJson) {
       try {
         snsLinks = JSON.parse(decodeURIComponent(snsLinksJson));
+        console.log('✅ SNSリンクのパース成功:', snsLinks);
       } catch (error) {
-        console.error('SNSリンクのパースに失敗:', error);
+        console.error('❌ SNSリンクのパースに失敗:', error);
+        console.error('生のJSONデータ:', snsLinksJson);
       }
+    } else {
+      console.warn('⚠️ snsLinksJsonが空です');
     }
 
     // SNS選択画面を構築
     const snsGrid = document.getElementById('snsGrid');
-    snsLinks.forEach(link => {
+    console.log('🎨 SNS選択画面を構築中:', { snsLinksCount: snsLinks.length, snsGrid });
+
+    snsLinks.forEach((link, index) => {
+      console.log(`  📌 SNS ${index + 1}:`, link);
       const button = document.createElement('button');
       button.className = 'sns-button';
       button.innerHTML = `
@@ -188,6 +197,8 @@
 
       snsGrid.appendChild(button);
     });
+
+    console.log('✅ SNSボタン生成完了:', snsGrid.children.length);
 
     // SNSを選択したらカウントダウン開始
     function startCountdownForSNS(snsLink) {
@@ -395,7 +406,10 @@
             stopWarnings();
 
             // ドリル画面（HomeTeacher）に戻る
-            const baseUrl = window.location.origin + (import.meta?.env?.BASE_URL || window.location.pathname.split('/warning.html')[0] + '/');
+            // BASE_URLを動的に計算（/HomeTeacher/warning.html → /HomeTeacher/）
+            const pathParts = window.location.pathname.split('/');
+            pathParts.pop(); // warning.htmlを削除
+            const baseUrl = window.location.origin + pathParts.join('/') + '/';
             window.location.replace(baseUrl);
           }
         }
