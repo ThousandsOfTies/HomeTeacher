@@ -61,6 +61,11 @@ export default defineConfig({
         navigateFallback: null,
         runtimeCaching: [
           {
+            // warning.htmlは常にネットワークから取得（キャッシュしない）
+            urlPattern: /\/warning\.html/,
+            handler: 'NetworkOnly'
+          },
+          {
             // HTML/JS/CSSは常にネットワークから取得（キャッシュはフォールバックのみ）
             urlPattern: /\.(?:html|js|css)$/,
             handler: 'NetworkFirst',
