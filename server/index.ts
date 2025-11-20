@@ -141,19 +141,11 @@ app.post('/api/grade', async (req, res) => {
     // Gemini 2.0 Flash モデルを使用（最新・最速モデル）
     // 開発環境: gemini-2.0-flash-exp (最速、実験版)
     // 本番環境: gemini-2.0-flash (安定版) - .envで切り替え可能
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
-    console.log(`🤖 使用モデル: ${modelName}`)
+    // フォールバック戦略: exp版を優先、エラー時は安定版に自動切り替え
+    const preferredModelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
+    const fallbackModelName = 'gemini-2.0-flash'
 
-    // 生成パラメータを最適化（バランス型）
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        temperature: 0.4, // 適度な柔軟性を持たせる
-        maxOutputTokens: 2048, // 十分な出力長を確保
-        topP: 0.95, // デフォルト値に近い設定
-        topK: 40, // デフォルト値
-      }
-    })
+    console.log(`🤖 優先モデル: ${preferredModelName}`)
 
     const prompt = `Please grade the problems in this image and respond in ${responseLang}.
 Return your answer in the following JSON format:
@@ -161,46 +153,82 @@ Return your answer in the following JSON format:
 
 IMPORTANT: All text content (feedback, explanation, overallComment, etc.) must be in ${responseLang}.`
 
-    // Gemini APIにリクエスト（リトライ機能付き）- 高速化のためリトライを削減
+    // Gemini APIにリクエスト（モデルフォールバック機能付き）
     let result
     let lastError
-    const maxRetries = 1 // リトライなし（初回のみ）
-    const retryDelay = 500 // 待機時間を最小化
-
+    let usedModelName = preferredModelName
     const startTime = Date.now()
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`⏱️ 採点リクエスト開始...`)
-        result = await model.generateContent([
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data
-            }
-          },
-          prompt
-        ])
-        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
-        console.log(`✅ APIレスポンス: ${elapsedTime}秒`)
-        break // 成功したらループを抜ける
-      } catch (error: any) {
-        lastError = error
-        console.error(`試行 ${attempt} 失敗:`, error.message)
 
-        // 503エラー（過負荷）の場合のみリトライ
-        if (error.status === 503 && attempt < maxRetries) {
-          console.log(`${retryDelay}ms待機してリトライします...`)
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
-        } else {
-          // その他のエラーまたは最後の試行の場合は中断
-          throw error
+    // 優先モデルで試行
+    try {
+      console.log(`⏱️ 採点リクエスト開始 (${preferredModelName})...`)
+      const model = genAI.getGenerativeModel({
+        model: preferredModelName,
+        generationConfig: {
+          temperature: 0.4, // 適度な柔軟性を持たせる
+          maxOutputTokens: 2048, // 十分な出力長を確保
+          topP: 0.95, // デフォルト値に近い設定
+          topK: 40, // デフォルト値
         }
+      })
+
+      result = await model.generateContent([
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data
+          }
+        },
+        prompt
+      ])
+
+      const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      console.log(`✅ APIレスポンス (${preferredModelName}): ${elapsedTime}秒`)
+    } catch (error: any) {
+      lastError = error
+      console.warn(`⚠️ ${preferredModelName} で失敗:`, error.message)
+
+      // フォールバックモデルで再試行（優先モデルと異なる場合のみ）
+      if (preferredModelName !== fallbackModelName) {
+        try {
+          console.log(`🔄 フォールバック: ${fallbackModelName} で再試行...`)
+          const fallbackModel = genAI.getGenerativeModel({
+            model: fallbackModelName,
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 2048,
+              topP: 0.95,
+              topK: 40,
+            }
+          })
+
+          result = await fallbackModel.generateContent([
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: base64Data
+              }
+            },
+            prompt
+          ])
+
+          usedModelName = fallbackModelName
+          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
+          console.log(`✅ APIレスポンス (${fallbackModelName}): ${elapsedTime}秒`)
+        } catch (fallbackError: any) {
+          console.error(`❌ ${fallbackModelName} でも失敗:`, fallbackError.message)
+          throw fallbackError
+        }
+      } else {
+        throw error
       }
     }
 
     if (!result) {
       throw lastError
     }
+
+    console.log(`📊 使用されたモデル: ${usedModelName}`)
 
     const response = await result.response
     const responseText = response.text()
