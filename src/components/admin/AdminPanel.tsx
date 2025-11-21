@@ -50,6 +50,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [showStorageInfo, setShowStorageInfo] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [snsTimeLimit, setSnsTimeLimit] = useState<number>(30); // デフォルト30分
 
   // Load data on mount
@@ -620,6 +621,124 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
         </div>
       )}
 
+      {showNotificationSettings && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '20px' }}>
+              🔔 Notification (for 👨‍👩‍👧‍👦)
+            </h3>
+
+            <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#7f8c8d' }}>
+              ⚠️ iOS/iPadOSの場合、ホーム画面に追加したアプリでのみ通知が動作します
+            </p>
+
+            {notificationPermission === 'granted' && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#d4edda',
+                borderRadius: '8px',
+                border: '1px solid #c3e6cb',
+                marginBottom: '12px'
+              }}>
+                <div style={{ color: '#155724', fontWeight: '600', marginBottom: '4px' }}>
+                  ✅ 通知が有効です
+                </div>
+                <div style={{ color: '#155724', fontSize: '12px' }}>
+                  時間切れの際に通知が送信されます
+                </div>
+              </div>
+            )}
+
+            {notificationPermission === 'default' && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#fff3cd',
+                borderRadius: '8px',
+                border: '1px solid #ffeeba',
+                marginBottom: '12px'
+              }}>
+                <div style={{ color: '#856404', fontWeight: '600', marginBottom: '8px' }}>
+                  ⚠️ 通知が未設定です
+                </div>
+                <div style={{ color: '#856404', fontSize: '13px', marginBottom: '12px' }}>
+                  時間切れ通知を受け取るには許可が必要です
+                </div>
+                <button
+                  onClick={requestNotificationPermission}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  通知を許可する
+                </button>
+              </div>
+            )}
+
+            {notificationPermission === 'denied' && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8d7da',
+                borderRadius: '8px',
+                border: '1px solid #f5c6cb',
+                marginBottom: '12px'
+              }}>
+                <div style={{ color: '#721c24', fontWeight: '600', marginBottom: '8px' }}>
+                  ❌ 通知が拒否されています
+                </div>
+                <div style={{ color: '#721c24', fontSize: '13px' }}>
+                  iPadの設定 → Safari → HomeTeacher から通知を許可してください
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowNotificationSettings(false)}
+              style={{
+                width: '100%',
+                padding: '10px 20px',
+                backgroundColor: '#3498db',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3498db'}
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
+
       {currentError && (
         <div style={{
           position: 'fixed',
@@ -833,6 +952,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '12px',
                 fontSize: '18px',
                 fontWeight: '600',
@@ -849,8 +969,11 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               }}
               title="採点履歴を表示"
             >
-              <span style={{ fontSize: '24px' }}>🕒</span>
-              <span>History</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '24px' }}>🕒</span>
+                <span>History</span>
+              </div>
+              <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
             </button>
 
             {/* ストレージ情報カード */}
@@ -871,6 +994,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     gap: '12px',
                     fontSize: '18px',
                     fontWeight: '600',
@@ -886,8 +1010,11 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   }}
                   title="ストレージ詳細を表示"
                 >
-                  <span style={{ fontSize: '24px' }}>💾</span>
-                  <span>Storage</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '24px' }}>💾</span>
+                    <span>Storage</span>
+                  </div>
+                  <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
                 </button>
 
                 <div style={{
@@ -916,6 +1043,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '12px',
                 fontSize: '18px',
                 fontWeight: '600',
@@ -932,100 +1060,49 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               }}
               title="リンク設定"
             >
-              <span style={{ fontSize: '24px' }}>❤️</span>
-              <span>Links ({snsLinks.length})</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '24px' }}>❤️</span>
+                <span>Links ({snsLinks.length})</span>
+              </div>
+              <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
             </button>
 
             {/* 通知設定セクション */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '2px solid #ecf0f1',
-              marginTop: '20px'
-            }}>
-              <div style={{
+            <button
+              onClick={() => setShowNotificationSettings(true)}
+              style={{
+                width: '100%',
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                border: '2px solid #ecf0f1',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '12px',
-                marginBottom: '8px'
-              }}>
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#2c3e50',
+                transition: 'all 0.2s',
+                marginTop: '20px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#e74c3c';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#ecf0f1';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              title="通知設定"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '24px' }}>🔔</span>
-                <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
-                  Notification (for パパママ)
-                </h3>
+                <span>Notification (for 👨‍👩‍👧‍👦)</span>
               </div>
-              <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#7f8c8d' }}>
-                ⚠️ iOS/iPadOSの場合、ホーム画面に追加したアプリでのみ通知が動作します
-              </p>
-
-              {notificationPermission === 'granted' && (
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: '#d4edda',
-                  borderRadius: '8px',
-                  border: '1px solid #c3e6cb',
-                  marginBottom: '12px'
-                }}>
-                  <div style={{ color: '#155724', fontWeight: '600', marginBottom: '4px' }}>
-                    ✅ 通知が有効です
-                  </div>
-                  <div style={{ color: '#155724', fontSize: '12px' }}>
-                    時間切れの際に通知が送信されます
-                  </div>
-                </div>
-              )}
-
-              {notificationPermission === 'default' && (
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: '#fff3cd',
-                  borderRadius: '8px',
-                  border: '1px solid #ffeeba',
-                  marginBottom: '12px'
-                }}>
-                  <div style={{ color: '#856404', fontWeight: '600', marginBottom: '8px' }}>
-                    ⚠️ 通知が未設定です
-                  </div>
-                  <div style={{ color: '#856404', fontSize: '13px', marginBottom: '12px' }}>
-                    時間切れ通知を受け取るには許可が必要です
-                  </div>
-                  <button
-                    onClick={requestNotificationPermission}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#3498db',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    通知を許可する
-                  </button>
-                </div>
-              )}
-
-              {notificationPermission === 'denied' && (
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: '#f8d7da',
-                  borderRadius: '8px',
-                  border: '1px solid #f5c6cb',
-                  marginBottom: '12px'
-                }}>
-                  <div style={{ color: '#721c24', fontWeight: '600', marginBottom: '8px' }}>
-                    ❌ 通知が拒否されています
-                  </div>
-                  <div style={{ color: '#721c24', fontSize: '13px' }}>
-                    iPadの設定 → Safari → HomeTeacher から通知を許可してください
-                  </div>
-                </div>
-              )}
-            </div>
+              <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
+            </button>
           </div>
 
           {/* 広告: 下部 */}
