@@ -10,6 +10,7 @@
   align-items: center;
   z-index: 1000;
   animation: fadeIn 0.2s ease-in;
+  overflow-y: auto;
 }
 
 @keyframes fadeIn {
