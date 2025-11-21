@@ -32,45 +32,49 @@ export const useDrawing = (pageNum: number) => {
     const normalizedX = x / canvas.width
     const normalizedY = y / canvas.height
 
-    // 前の点との距離を計算して、十分離れている場合のみ追加（滑らかな線のため）
-    const prevPoint = currentPathRef.current.points[currentPathRef.current.points.length - 1]
-    const dx = normalizedX - prevPoint.x
-    const dy = normalizedY - prevPoint.y
-    const distance = Math.sqrt(dx * dx + dy * dy)
-    
-    // 正規化座標での最小距離（canvas幅の0.5%）
-    const minDistance = 0.005 / 2 // 1/2に縮小
-    
-    if (distance < minDistance) {
-      // 距離が小さすぎる場合は点を追加せず、現在の点まで描画のみ
-      const ctx = canvas.getContext('2d')!
-      ctx.strokeStyle = currentPathRef.current.color
-      ctx.lineWidth = currentPathRef.current.width
-      ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
-
-      ctx.beginPath()
-      ctx.moveTo(prevPoint.x * canvas.width, prevPoint.y * canvas.height)
-      ctx.lineTo(x, y)
-      ctx.stroke()
-      return
-    }
-
+    // すべての点を保存（間引きなし - Apple Pencilの高速描画に対応）
     currentPathRef.current.points.push({ x: normalizedX, y: normalizedY })
 
-    // リアルタイムで描画
-    const ctx = canvas.getContext('2d')!
-    const drawPrevPoint = currentPathRef.current.points[currentPathRef.current.points.length - 2]
+    const points = currentPathRef.current.points
+    if (points.length < 2) return
 
+    // 二次ベジェ曲線で滑らかに描画
+    const ctx = canvas.getContext('2d')!
     ctx.strokeStyle = currentPathRef.current.color
     ctx.lineWidth = currentPathRef.current.width
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
 
-    ctx.beginPath()
-    ctx.moveTo(drawPrevPoint.x * canvas.width, drawPrevPoint.y * canvas.height)
-    ctx.lineTo(x, y)
-    ctx.stroke()
+    const len = points.length
+    if (len < 3) {
+      // 点が2つの場合は直線
+      ctx.beginPath()
+      ctx.moveTo(points[0].x * canvas.width, points[0].y * canvas.height)
+      ctx.lineTo(points[1].x * canvas.width, points[1].y * canvas.height)
+      ctx.stroke()
+    } else {
+      // 3点以上の場合はベジェ曲線で滑らかに
+      const p0 = points[len - 3]
+      const p1 = points[len - 2]
+      const p2 = points[len - 1]
+
+      // 制御点を中間点に設定
+      const cpX = p1.x * canvas.width
+      const cpY = p1.y * canvas.height
+      const endX = (p1.x + p2.x) / 2 * canvas.width
+      const endY = (p1.y + p2.y) / 2 * canvas.height
+
+      ctx.beginPath()
+      if (len === 3) {
+        ctx.moveTo(p0.x * canvas.width, p0.y * canvas.height)
+      } else {
+        const prevEndX = (p0.x + p1.x) / 2 * canvas.width
+        const prevEndY = (p0.y + p1.y) / 2 * canvas.height
+        ctx.moveTo(prevEndX, prevEndY)
+      }
+      ctx.quadraticCurveTo(cpX, cpY, endX, endY)
+      ctx.stroke()
+    }
   }
 
   const stopDrawing = (onSave?: (paths: DrawingPath[]) => void) => {
@@ -117,18 +121,42 @@ export const useDrawing = (pageNum: number) => {
     paths.forEach(path => {
       if (path.points.length < 2) return
 
-      ctx.beginPath()
       ctx.strokeStyle = path.color
       ctx.lineWidth = path.width
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
 
-      // 正規化座標(0-1)を実座標に変換
-      ctx.moveTo(path.points[0].x * width, path.points[0].y * height)
-      for (let i = 1; i < path.points.length; i++) {
-        ctx.lineTo(path.points[i].x * width, path.points[i].y * height)
+      const points = path.points
+
+      if (points.length === 2) {
+        // 2点の場合は直線
+        ctx.beginPath()
+        ctx.moveTo(points[0].x * width, points[0].y * height)
+        ctx.lineTo(points[1].x * width, points[1].y * height)
+        ctx.stroke()
+      } else {
+        // 3点以上の場合はベジェ曲線で滑らかに描画
+        ctx.beginPath()
+        ctx.moveTo(points[0].x * width, points[0].y * height)
+
+        for (let i = 1; i < points.length - 1; i++) {
+          const p0 = points[i]
+          const p1 = points[i + 1]
+
+          // 制御点を現在の点に、終点を中間点に設定
+          const cpX = p0.x * width
+          const cpY = p0.y * height
+          const endX = (p0.x + p1.x) / 2 * width
+          const endY = (p0.y + p1.y) / 2 * height
+
+          ctx.quadraticCurveTo(cpX, cpY, endX, endY)
+        }
+
+        // 最後の点まで直線で接続
+        const lastPoint = points[points.length - 1]
+        ctx.lineTo(lastPoint.x * width, lastPoint.y * height)
+        ctx.stroke()
       }
-      ctx.stroke()
     })
   }
 
