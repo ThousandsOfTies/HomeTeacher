@@ -822,32 +822,36 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
             marginTop: '20px'
           }}>
             {/* 採点履歴カード */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '2px solid #ecf0f1'
-            }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
-                🕒 History
-              </h3>
-              <button
-                onClick={() => setShowGradingHistory(true)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#9b59b6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '24px',
-                  cursor: 'pointer'
-                }}
-                title="採点履歴を表示"
-              >
-                📊
-              </button>
-            </div>
+            <button
+              onClick={() => setShowGradingHistory(true)}
+              style={{
+                width: '100%',
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                border: '2px solid #ecf0f1',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#2c3e50',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#9b59b6';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#ecf0f1';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              title="採点履歴を表示"
+            >
+              <span style={{ fontSize: '24px' }}>🕒</span>
+              <span>History</span>
+            </button>
 
             {/* ストレージ情報カード */}
             {storageInfo && (
@@ -857,95 +861,80 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                 padding: '20px',
                 border: '2px solid #ecf0f1'
               }}>
-                <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
-                  💾 Storage
-                </h3>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#7f8c8d'
-                  }}>
-                    <span>Usage:</span>
-                    <span style={{ fontWeight: '600', color: '#2c3e50' }}>
-                      {storageInfo.usageMB.toFixed(2)} MB / {storageInfo.quotaMB.toFixed(0)} MB
-                    </span>
-                  </div>
-
-                  <div style={{
-                    width: '100%',
-                    height: '8px',
-                    backgroundColor: '#ecf0f1',
-                    borderRadius: '4px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      width: `${Math.min(storageInfo.usagePercent, 100)}%`,
-                      height: '100%',
-                      backgroundColor: storageInfo.usagePercent > 80 ? '#e74c3c' : storageInfo.usagePercent > 50 ? '#f39c12' : '#27ae60',
-                      transition: 'width 0.3s ease'
-                    }} />
-                  </div>
-
-                  <div style={{
-                    marginTop: '8px',
-                    fontSize: '12px',
-                    color: '#95a5a6',
-                    textAlign: 'right'
-                  }}>
-                    {storageInfo.usagePercent.toFixed(1)}% used
-                  </div>
-                </div>
-
                 <button
                   onClick={() => setShowStorageInfo(true)}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    backgroundColor: '#3498db',
-                    color: 'white',
+                    backgroundColor: 'transparent',
                     border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '24px',
-                    cursor: 'pointer'
+                    padding: 0,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#2c3e50',
+                    marginBottom: '12px',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#3498db';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#2c3e50';
                   }}
                   title="ストレージ詳細を表示"
                 >
-                  📋
+                  <span style={{ fontSize: '24px' }}>💾</span>
+                  <span>Storage</span>
                 </button>
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '14px',
+                  color: '#7f8c8d'
+                }}>
+                  <span>Usage:</span>
+                  <span style={{ fontWeight: '600', color: '#2c3e50' }}>
+                    {storageInfo.usageMB.toFixed(2)} MB / {storageInfo.quotaMB.toFixed(0)} MB
+                  </span>
+                </div>
               </div>
             )}
 
             {/* SNS Links Section */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '2px solid #ecf0f1'
-            }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
-                ❤️ Links ({snsLinks.length})
-              </h3>
-              <button
-                onClick={() => setShowSNSSettings(true)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#27ae60',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '24px',
-                  cursor: 'pointer'
-                }}
-                title="リンク設定"
-              >
-                ⚙️
-              </button>
-            </div>
+            <button
+              onClick={() => setShowSNSSettings(true)}
+              style={{
+                width: '100%',
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                border: '2px solid #ecf0f1',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#2c3e50',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#27ae60';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#ecf0f1';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              title="リンク設定"
+            >
+              <span style={{ fontSize: '24px' }}>❤️</span>
+              <span>Links ({snsLinks.length})</span>
+            </button>
 
             {/* 通知設定セクション */}
             <div style={{
@@ -955,9 +944,17 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               border: '2px solid #ecf0f1',
               marginTop: '20px'
             }}>
-              <h3 style={{ margin: '0 0 8px 0', color: '#2c3e50', fontSize: '18px' }}>
-                🔔 通知設定（保護者向け）
-              </h3>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '8px'
+              }}>
+                <span style={{ fontSize: '24px' }}>🔔</span>
+                <h3 style={{ margin: 0, color: '#2c3e50', fontSize: '18px', fontWeight: '600' }}>
+                  Notification (for パパママ)
+                </h3>
+              </div>
               <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#7f8c8d' }}>
                 ⚠️ iOS/iPadOSの場合、ホーム画面に追加したアプリでのみ通知が動作します
               </p>
