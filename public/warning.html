@@ -332,13 +332,8 @@
           notification.close();
         };
 
-        // 5秒ごとに通知を再送（ページが表示されている間のみ）
+        // 5秒ごとに通知を再送（バックグラウンドでも通知）
         notificationIntervalId = setInterval(() => {
-          // バックグラウンドの場合は通知を送らない
-          if (document.hidden) {
-            return;
-          }
-
           if (Notification.permission === 'granted') {
             new Notification(`⚠️ まだ ${snsName} を見ていますか？`, {
               body: '時間切れです。SNSタブを閉じてください。',
@@ -405,12 +400,14 @@
             stopCountdown();
             stopWarnings();
 
-            // ドリル画面（HomeTeacher）に戻る
-            // BASE_URLを動的に計算（/HomeTeacher/warning.html → /HomeTeacher/）
+            // ドリル画面に戻る
+            // キャッシュバスティング用のタイムスタンプを追加してリソースを確実に再読み込み
             const pathParts = window.location.pathname.split('/');
             pathParts.pop(); // warning.htmlを削除
             const baseUrl = window.location.origin + pathParts.join('/') + '/';
-            window.location.replace(baseUrl);
+
+            // タイムスタンプ付きで遷移（PDFやWorkerのキャッシュ問題を回避）
+            window.location.replace(baseUrl + '?t=' + Date.now());
           }
         }
       } else {
