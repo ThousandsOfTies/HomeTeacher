@@ -829,11 +829,8 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               border: '2px solid #ecf0f1'
             }}>
               <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
-                🕒 採点履歴
+                🕒 History
               </h3>
-              <p style={{ fontSize: '14px', color: '#7f8c8d', marginBottom: '16px' }}>
-                これまでの採点結果を確認できます
-              </p>
               <button
                 onClick={() => setShowGradingHistory(true)}
                 style={{
@@ -843,12 +840,12 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
+                  fontSize: '24px',
                   cursor: 'pointer'
                 }}
+                title="採点履歴を表示"
               >
-                履歴を表示
+                📊
               </button>
             </div>
 
@@ -861,7 +858,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                 border: '2px solid #ecf0f1'
               }}>
                 <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
-                  💾 Storage Information
+                  💾 Storage
                 </h3>
 
                 <div style={{ marginBottom: '16px' }}>
@@ -912,12 +909,12 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
+                    fontSize: '24px',
                     cursor: 'pointer'
                   }}
+                  title="ストレージ詳細を表示"
                 >
-                  詳細を表示
+                  📋
                 </button>
               </div>
             )}
@@ -929,7 +926,9 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               padding: '20px',
               border: '2px solid #ecf0f1'
             }}>
-              <h2 className="section-title"># Links ({snsLinks.length})</h2>
+              <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '18px' }}>
+                ❤️ Links ({snsLinks.length})
+              </h3>
               <button
                 onClick={() => setShowSNSSettings(true)}
                 style={{
@@ -939,13 +938,12 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
+                  fontSize: '24px',
                   cursor: 'pointer'
                 }}
+                title="リンク設定"
               >
-                <span style={{ marginRight: '8px' }}>⚙️</span>
-                Settings
+                ⚙️
               </button>
             </div>
 
