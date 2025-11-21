@@ -53,6 +53,11 @@ const getSNSIcon = (name: string): { svg: string; color: string } | null => {
 const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }: GradingResultProps) => {
   if (!result) return null
 
+  // Null要素をフィルタリングした有効な問題のみを取得
+  const validProblems = result.problems?.filter(problem =>
+    problem.problemNumber !== null && problem.isCorrect !== null
+  ) || []
+
   // SNS選択画面（警告ページ）を開く
   const openSNSSelectionPage = () => {
     // SNSリンク情報をJSON形式でURLパラメータに渡す
@@ -81,9 +86,9 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
         </div>
 
         <div className="result-content">
-          {result.problems && result.problems.length > 0 ? (
+          {validProblems.length > 0 ? (
             <div className="problems-list">
-              {result.problems.map((problem, index) => (
+              {validProblems.map((problem, index) => (
                 <div
                   key={index}
                   className={`problem-item ${
@@ -139,7 +144,7 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
             </div>
           )}
 
-          {result.overallComment && result.problems.length > 0 && (
+          {result.overallComment && validProblems.length > 0 && (
             <div className="overall-comment">
               <h3>全体コメント</h3>
               <p>{result.overallComment}</p>
