@@ -929,41 +929,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               padding: '20px',
               border: '2px solid #ecf0f1'
             }}>
-          <h2 className="section-title">Enjoy Links</h2>
-
-          {snsLinks.length > 0 ? (
-            <div className="sns-list">
-              {snsLinks.map((link) => {
-                const snsIcon = getSNSIcon(link.id);
-                const iconColor = snsIcon?.color || '#3498db';
-
-                return (
-                  <div
-                    key={link.id}
-                    className="sns-list-item"
-                    style={{
-                      borderColor: iconColor
-                    }}
-                  >
-                    {snsIcon ? (
-                      <div
-                        className="sns-icon"
-                        dangerouslySetInnerHTML={{ __html: snsIcon.svg }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: '24px' }}>{link.icon}</span>
-                    )}
-                    <span className="sns-name">{link.name}</span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <p>No links configured</p>
-            </div>
-          )}
-
+              <h2 className="section-title"># Links ({snsLinks.length})</h2>
               <button
                 onClick={() => setShowSNSSettings(true)}
                 style={{
@@ -975,8 +941,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  cursor: 'pointer',
-                  marginTop: '16px'
+                  cursor: 'pointer'
                 }}
               >
                 <span style={{ marginRight: '8px' }}>⚙️</span>
