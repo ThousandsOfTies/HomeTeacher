@@ -116,6 +116,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const [isDrawingMode, setIsDrawingMode] = useState(false)
   const [isEraserMode, setIsEraserMode] = useState(false)
 
+  // 2本指タップ検出用
+  const twoFingerTapStartTimeRef = useRef<number | null>(null)
+  const initialPinchDistanceRef = useRef<number | null>(null)
+
   // ペンの設定
   const [penColor, setPenColor] = useState('#FF0000')
   const [penSize, setPenSize] = useState(3)
@@ -493,8 +497,59 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
+  // 2本指タップによるアンドゥ検出
+  const handleTwoFingerTap = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 2) {
+      // 2本指でタッチした時点の時刻と距離を記録
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      twoFingerTapStartTimeRef.current = Date.now()
+      initialPinchDistanceRef.current = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      )
+    }
+  }
+
+  const handleTwoFingerTapEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // 2本指が離れた時、タップ判定
+    if (e.changedTouches.length === 2 && twoFingerTapStartTimeRef.current && initialPinchDistanceRef.current !== null) {
+      const tapDuration = Date.now() - twoFingerTapStartTimeRef.current
+
+      // 現在の2本指の距離を計算（ピンチズームと区別するため）
+      const touch1 = e.changedTouches[0]
+      const touch2 = e.changedTouches[1]
+      const currentDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      )
+      const distanceChange = Math.abs(currentDistance - initialPinchDistanceRef.current)
+
+      // タップ判定: 短時間（300ms以内）& 指の距離がほぼ変わらない（20px以内）
+      if (tapDuration < 300 && distanceChange < 20) {
+        e.preventDefault()
+        console.log('👆👆 2本指タップ検出 - アンドゥ実行')
+
+        // 既存のundo()関数を呼び出し
+        undo()
+
+        // 振動フィードバック（対応デバイスのみ）
+        if (navigator.vibrate) {
+          navigator.vibrate(50)
+        }
+      }
+
+      // リセット
+      twoFingerTapStartTimeRef.current = null
+      initialPinchDistanceRef.current = null
+    }
+  }
+
   // タッチでの描画機能（Apple Pencil対応 + パームリジェクション）
   const handleDrawingTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // 2本指タップ検出を先に実行
+    handleTwoFingerTap(e)
+
     if (!drawingCanvasRef.current) return
     if (!isDrawingMode && !isEraserMode) return
 
@@ -584,11 +639,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }
 
   const handleDrawingTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // 2本指タップ終了検出を先に実行
+    handleTwoFingerTapEnd(e)
+
     // すべてのタッチが終了したら描画を終了
     if (e.touches.length === 0) {
       // カーソルを非表示
       setEraserCursorPos(null)
-      
+
       if (isEraserMode && isErasing) {
         hookStopErasing((newPaths) => {
           saveToHistory(newPaths)
