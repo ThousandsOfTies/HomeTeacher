@@ -118,7 +118,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   // 2本指タップ検出用
   const twoFingerTapStartTimeRef = useRef<number | null>(null)
-  const initialPinchDistanceRef = useRef<number | null>(null)
+  const twoFingerTapDistanceRef = useRef<number | null>(null)
 
   // ペンの設定
   const [penColor, setPenColor] = useState('#FF0000')
@@ -504,7 +504,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
       twoFingerTapStartTimeRef.current = Date.now()
-      initialPinchDistanceRef.current = Math.hypot(
+      twoFingerTapDistanceRef.current = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       )
@@ -513,7 +513,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   const handleTwoFingerTapEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     // 2本指が離れた時、タップ判定
-    if (e.changedTouches.length === 2 && twoFingerTapStartTimeRef.current && initialPinchDistanceRef.current !== null) {
+    if (e.changedTouches.length === 2 && twoFingerTapStartTimeRef.current && twoFingerTapDistanceRef.current !== null) {
       const tapDuration = Date.now() - twoFingerTapStartTimeRef.current
 
       // 現在の2本指の距離を計算（ピンチズームと区別するため）
@@ -523,7 +523,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       )
-      const distanceChange = Math.abs(currentDistance - initialPinchDistanceRef.current)
+      const distanceChange = Math.abs(currentDistance - twoFingerTapDistanceRef.current)
 
       // タップ判定: 短時間（300ms以内）& 指の距離がほぼ変わらない（20px以内）
       if (tapDuration < 300 && distanceChange < 20) {
@@ -541,7 +541,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
       // リセット
       twoFingerTapStartTimeRef.current = null
-      initialPinchDistanceRef.current = null
+      twoFingerTapDistanceRef.current = null
     }
   }
 
