@@ -863,15 +863,22 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   className="pdf-list-item"
                   onClick={() => onSelectPDF(record)}
                 >
-                  <div className="icon-container">
+                  <div className="icon-container" style={{
+                    width: '64px',
+                    height: '64px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
                     {record.thumbnail ? (
                       <img
                         src={record.thumbnail}
                         alt={record.fileName}
                         style={{
-                          width: '48px',
-                          height: '64px',
-                          objectFit: 'cover',
+                          maxWidth: '64px',
+                          maxHeight: '64px',
+                          objectFit: 'contain',
                           borderRadius: '4px',
                           border: '1px solid #ddd'
                         }}
