@@ -189,8 +189,8 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
                   <div className="history-item-content">
                     <div className="timestamp">{formatDate(record.timestamp)}</div>
                     <div className="answer-preview">
-                      解答: {record.studentAnswer.substring(0, 50)}
-                      {record.studentAnswer.length > 50 ? '...' : ''}
+                      解答: {record.studentAnswer?.substring(0, 50) || '(なし)'}
+                      {(record.studentAnswer?.length || 0) > 50 ? '...' : ''}
                     </div>
                   </div>
                 </div>
