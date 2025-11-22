@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import fs from 'fs'
 
 dotenv.config()
@@ -47,8 +47,8 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' }))
 
-// Gemini APIクライアント
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+// Gemini APIクライアント (新SDK)
+const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY || ''})
 
 // シンプルなレート制限（メモリベース）
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -138,11 +138,11 @@ app.post('/api/grade', async (req, res) => {
     fs.writeFileSync(debugImagePath, Buffer.from(base64Data, 'base64'))
     console.log(`🖼️ デバッグ画像を保存: ${debugImagePath}`)
 
-    // Gemini 2.0 Flash モデルを使用（最新・最速モデル）
-    // 開発環境: gemini-2.0-flash-exp (最速、実験版)
-    // 本番環境: gemini-2.0-flash (安定版) - .envで切り替え可能
-    // フォールバック戦略: exp版を優先、エラー時は安定版に自動切り替え
-    const preferredModelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
+    // Gemini 3.0 Pro モデルを使用（最新・最高精度）
+    // 優先: gemini-3-pro-preview (Gemini 3.0、数学20倍改善)
+    // フォールバック: gemini-2.0-flash (安定版、コスト重視)
+    // .envで GEMINI_MODEL を設定して切り替え可能
+    const preferredModelName = process.env.GEMINI_MODEL || 'gemini-3-pro-preview'
     const fallbackModelName = 'gemini-2.0-flash'
 
     console.log(`🤖 優先モデル: ${preferredModelName}`)
@@ -162,25 +162,30 @@ IMPORTANT: All text content (feedback, explanation, overallComment, etc.) must b
     // 優先モデルで試行
     try {
       console.log(`⏱️ 採点リクエスト開始 (${preferredModelName})...`)
-      const model = genAI.getGenerativeModel({
+
+      result = await ai.models.generateContent({
         model: preferredModelName,
-        generationConfig: {
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Data
+                }
+              },
+              { text: prompt }
+            ]
+          }
+        ],
+        config: {
           temperature: 0.4, // 適度な柔軟性を持たせる
           maxOutputTokens: 2048, // 十分な出力長を確保
           topP: 0.95, // デフォルト値に近い設定
           topK: 40, // デフォルト値
         }
       })
-
-      result = await model.generateContent([
-        {
-          inlineData: {
-            mimeType: mimeType,
-            data: base64Data
-          }
-        },
-        prompt
-      ])
 
       const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
       console.log(`✅ APIレスポンス (${preferredModelName}): ${elapsedTime}秒`)
@@ -192,25 +197,30 @@ IMPORTANT: All text content (feedback, explanation, overallComment, etc.) must b
       if (preferredModelName !== fallbackModelName) {
         try {
           console.log(`🔄 フォールバック: ${fallbackModelName} で再試行...`)
-          const fallbackModel = genAI.getGenerativeModel({
+
+          result = await ai.models.generateContent({
             model: fallbackModelName,
-            generationConfig: {
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Data
+                    }
+                  },
+                  { text: prompt }
+                ]
+              }
+            ],
+            config: {
               temperature: 0.4,
               maxOutputTokens: 2048,
               topP: 0.95,
               topK: 40,
             }
           })
-
-          result = await fallbackModel.generateContent([
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: base64Data
-              }
-            },
-            prompt
-          ])
 
           usedModelName = fallbackModelName
           const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
@@ -230,8 +240,8 @@ IMPORTANT: All text content (feedback, explanation, overallComment, etc.) must b
 
     console.log(`📊 使用されたモデル: ${usedModelName}`)
 
-    const response = await result.response
-    const responseText = response.text()
+    // 新SDKのレスポンス取得方法
+    const responseText = result.text || ''
 
     // デバッグ用：生の応答をログ出力
     console.log('=== Gemini API 応答 ===')
