@@ -98,8 +98,17 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
         {/* 統計情報 */}
         <div className="history-stats">
           <div className="stat-item">
-            <span className="stat-value">
-              (〇: {correctCount}) (✕: {incorrectCount}) (〇+✕: {totalCount}) (〇/(〇+✕): {correctRate}%)
+            <span className="stat-value" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="result-badge correct" style={{ width: '20px', height: '20px', fontSize: '12px' }}>✓</span>
+                {correctCount}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="result-badge incorrect" style={{ width: '20px', height: '20px', fontSize: '12px' }}>✗</span>
+                {incorrectCount}
+              </span>
+              <span>Total: {totalCount}</span>
+              <span>Rate: {correctRate}%</span>
             </span>
           </div>
         </div>
@@ -111,24 +120,26 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
               className={filterCorrect === 'all' ? 'active' : ''}
               onClick={() => setFilterCorrect('all')}
               title="すべて表示"
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px' }}
             >
-              📋
+              <span className="result-badge correct" style={{ width: '20px', height: '20px', fontSize: '12px' }}>✓</span>
+              <span className="result-badge incorrect" style={{ width: '20px', height: '20px', fontSize: '12px' }}>✗</span>
             </button>
             <button
               className={filterCorrect === 'correct' ? 'active' : ''}
               onClick={() => setFilterCorrect('correct')}
               title="正解のみ"
-              style={{ fontSize: '20px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px' }}
             >
-              ✓
+              <span className="result-badge correct" style={{ width: '20px', height: '20px', fontSize: '12px' }}>✓</span>
             </button>
             <button
               className={filterCorrect === 'incorrect' ? 'active' : ''}
               onClick={() => setFilterCorrect('incorrect')}
               title="不正解のみ"
-              style={{ fontSize: '20px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px' }}
             >
-              ✗
+              <span className="result-badge incorrect" style={{ width: '20px', height: '20px', fontSize: '12px' }}>✗</span>
             </button>
           </div>
           <input
