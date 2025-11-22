@@ -89,7 +89,7 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
     <div className="grading-history-overlay">
       <div className="grading-history-panel">
         <div className="history-header">
-          <h2>採点履歴</h2>
+          <h2>History</h2>
           <button className="close-btn" onClick={onClose}>
             ✕
           </button>
@@ -98,20 +98,9 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
         {/* 統計情報 */}
         <div className="history-stats">
           <div className="stat-item">
-            <span className="stat-label">総問題数:</span>
-            <span className="stat-value">{totalCount}問</span>
-          </div>
-          <div className="stat-item correct">
-            <span className="stat-label">正解:</span>
-            <span className="stat-value">{correctCount}問</span>
-          </div>
-          <div className="stat-item incorrect">
-            <span className="stat-label">不正解:</span>
-            <span className="stat-value">{incorrectCount}問</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">正答率:</span>
-            <span className="stat-value">{correctRate}%</span>
+            <span className="stat-value">
+              (〇: {correctCount}) (✕: {incorrectCount}) (〇+✕: {totalCount}) (〇/(〇+✕): {correctRate}%)
+            </span>
           </div>
         </div>
 
@@ -121,20 +110,25 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
             <button
               className={filterCorrect === 'all' ? 'active' : ''}
               onClick={() => setFilterCorrect('all')}
+              title="すべて表示"
             >
-              すべて
+              📋
             </button>
             <button
               className={filterCorrect === 'correct' ? 'active' : ''}
               onClick={() => setFilterCorrect('correct')}
+              title="正解のみ"
+              style={{ fontSize: '20px' }}
             >
-              正解のみ
+              ✓
             </button>
             <button
               className={filterCorrect === 'incorrect' ? 'active' : ''}
               onClick={() => setFilterCorrect('incorrect')}
+              title="不正解のみ"
+              style={{ fontSize: '20px' }}
             >
-              不正解のみ
+              ✗
             </button>
           </div>
           <input
@@ -254,7 +248,7 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
 
         <div className="history-footer">
           <button className="close-button" onClick={onClose}>
-            閉じる
+            Close
           </button>
         </div>
       </div>

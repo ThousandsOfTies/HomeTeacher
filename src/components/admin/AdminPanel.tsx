@@ -1084,8 +1084,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                 fontSize: '18px',
                 fontWeight: '600',
                 color: '#2c3e50',
-                transition: 'all 0.2s',
-                marginTop: '20px'
+                transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = '#e74c3c';
