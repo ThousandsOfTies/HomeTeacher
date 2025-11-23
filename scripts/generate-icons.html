@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>Right-click each canvas and save as the filename shown below it.</p>
+
+    <div>
+        <canvas id="icon192" width="192" height="192"></canvas>
+        <p>Save as: pwa-192x192.png</p>
+    </div>
+
+    <div>
+        <canvas id="icon512" width="512" height="512"></canvas>
+        <p>Save as: pwa-512x512.png</p>
+    </div>
+
+    <div>
+        <canvas id="apple" width="180" height="180"></canvas>
+        <p>Save as: apple-touch-icon.png</p>
+    </div>
+
+    <div>
+        <canvas id="favicon" width="32" height="32"></canvas>
+        <p>Save as: favicon.ico (or favicon.png)</p>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            // Background
+            ctx.fillStyle = '#4F46E5';
+            ctx.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x+r, y);
+                this.arcTo(x+w, y,   x+w, y+h, r);
+                this.arcTo(x+w, y+h, x,   y+h, r);
+                this.arcTo(x,   y+h, x,   y,   r);
+                this.arcTo(x,   y,   x+w, y,   r);
+                this.closePath();
+            };
+            ctx.roundRect(0, 0, size, size, size * 0.2);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.6}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('H', size / 2, size / 2 + size * 0.05);
+        }
+
+        drawIcon('icon192', 192);
+        drawIcon('icon512', 512);
+        drawIcon('apple', 180);
+        drawIcon('favicon', 32);
+
+        // Auto-download icons
+        setTimeout(() => {
+            ['icon192', 'icon512', 'apple', 'favicon'].forEach((id, index) => {
+                setTimeout(() => {
+                    const canvas = document.getElementById(id);
+                    const link = document.createElement('a');
+                    const names = {
+                        'icon192': 'pwa-192x192.png',
+                        'icon512': 'pwa-512x512.png',
+                        'apple': 'apple-touch-icon.png',
+                        'favicon': 'favicon.ico'
+                    };
+                    link.download = names[id];
+                    link.href = canvas.toDataURL();
+                    link.click();
+                }, index * 500);
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# HomeTeacher API - Google Cloud Run デプロイスクリプト
+
+echo "🚀 HomeTeacher APIをGoogle Cloud Runにデプロイします..."
+
+# 環境変数の確認
+if [ -z "$GEMINI_API_KEY" ]; then
+  echo "⚠️  警告: GEMINI_API_KEY環境変数が設定されていません"
+  echo "デプロイ後、Cloud Runコンソールで環境変数を手動設定してください"
+fi
+
+# プロジェクトIDとリージョンの設定（必要に応じて変更）
+PROJECT_ID=$(gcloud config get-value project)
+REGION="asia-northeast1"  # 東京リージョン
+SERVICE_NAME="hometeacher-api"
+
+echo "📋 デプロイ設定:"
+echo "  プロジェクトID: $PROJECT_ID"
+echo "  リージョン: $REGION"
+echo "  サービス名: $SERVICE_NAME"
+echo ""
+
+# Cloud Runにデプロイ
+gcloud run deploy $SERVICE_NAME \
+  --source . \
+  --platform managed \
+  --region $REGION \
+  --allow-unauthenticated \
+  --min-instances 0 \
+  --max-instances 10 \
+  --memory 512Mi \
+  --cpu 1 \
+  --timeout 60s \
+  --set-env-vars "NODE_ENV=production" \
+  --set-env-vars "GEMINI_API_KEY=${GEMINI_API_KEY}"
+
+if [ $? -eq 0 ]; then
+  echo ""
+  echo "✅ デプロイ完了！"
+  echo ""
+  echo "サービスURL:"
+  gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)'
+else
+  echo ""
+  echo "❌ デプロイに失敗しました"
+  exit 1
+fi
