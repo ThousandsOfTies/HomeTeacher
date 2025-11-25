@@ -1,6 +1,6 @@
 // IndexedDB管理ユーティリティ
 
-const DB_NAME = 'HomeTeacherDB';
+const DB_NAME = 'TutoTutoDB';
 const DB_VERSION = 7; // バージョンを上げて設定ストア追加
 const STORE_NAME = 'pdfFiles';
 const SNS_STORE_NAME = 'snsLinks';

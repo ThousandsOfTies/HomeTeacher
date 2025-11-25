@@ -41,7 +41,7 @@ export const useStorage = () => {
 
     try {
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase('HomeTeacherDB')
+        const request = indexedDB.deleteDatabase('TutoTutoDB')
         request.onsuccess = () => resolve()
         request.onerror = () => reject(new Error('データベースの削除に失敗しました'))
       })

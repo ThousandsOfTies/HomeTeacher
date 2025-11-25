@@ -1,6 +1,6 @@
-# HomeTeacher - デプロイガイド
+# TutoTuto - デプロイガイド
 
-このガイドでは、HomeTeacherアプリをGitHub Pages（フロントエンド）とGoogle Cloud Run（バックエンドAPI）にデプロイする手順を説明します。
+このガイドでは、TutoTutoアプリをGitHub Pages（フロントエンド）とGoogle Cloud Run（バックエンドAPI）にデプロイする手順を説明します。
 
 ## 前提条件
 

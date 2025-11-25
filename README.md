@@ -1,2 +1,2 @@
-# HomeTeacher
-Home Teacher with AI
+# TutoTuto
+AI-powered drill grading app with handwriting support

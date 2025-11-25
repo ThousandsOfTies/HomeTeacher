@@ -10,37 +10,19 @@ const sizes = [
 ];
 
 const publicDir = path.join(process.cwd(), 'public');
-
-// SVGテンプレート
-function generateSVG(size) {
-  const cornerRadius = size * 0.2;
-  const fontSize = size * 0.6;
-
-  return `
-    <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${size}" height="${size}" fill="#4F46E5" rx="${cornerRadius}"/>
-      <text
-        x="${size / 2}"
-        y="${size / 2 + size * 0.05}"
-        font-size="${fontSize}"
-        font-family="Arial, sans-serif"
-        fill="white"
-        text-anchor="middle"
-        dominant-baseline="middle"
-        font-weight="bold">H</text>
-    </svg>
-  `;
-}
+const sourceIconPath = path.join(publicDir, 'favicon.svg');
 
 async function generateIcons() {
   try {
     await fs.mkdir(publicDir, { recursive: true });
 
+    // Read the source SVG file
+    const svgBuffer = await fs.readFile(sourceIconPath);
+
     for (const { size, name } of sizes) {
-      const svg = Buffer.from(generateSVG(size));
       const outputPath = path.join(publicDir, name);
 
-      await sharp(svg)
+      await sharp(svgBuffer)
         .resize(size, size)
         .png()
         .toFile(outputPath);

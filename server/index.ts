@@ -352,13 +352,22 @@ Please respond ONLY with valid JSON. Do not include markdown code blocks or any 
         }
       } catch (parseError) {
         console.error('❌ JSONパース失敗:', parseError)
-        // JSON形式でない場合は、テキストをそのまま返す
+        // JSON形式でない場合は、マークダウンブロックを除去してテキストを返す
+        let cleanText = responseText
+        // ```json ... ``` を除去
+        cleanText = cleanText.replace(/```json\n/g, '').replace(/\n```/g, '')
+        // 先頭の説明文も除去（"以下のJSON形式で..."など）
+        const jsonStart = cleanText.indexOf('{')
+        if (jsonStart > 0) {
+          cleanText = cleanText.substring(jsonStart)
+        }
+
         gradingResult = {
           problems: [],
-          overallComment: responseText,
+          overallComment: cleanText,
           rawResponse: responseText
         }
-        console.warn('⚠️ フォールバック: 生テキストを返します')
+        console.warn('⚠️ フォールバック: マークダウン除去後のテキストを返します')
       }
     }
 

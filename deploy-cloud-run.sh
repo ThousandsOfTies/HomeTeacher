@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# HomeTeacher API - Google Cloud Run デプロイスクリプト
+# TutoTuto API - Google Cloud Run デプロイスクリプト
 
-echo "🚀 HomeTeacher APIをGoogle Cloud Runにデプロイします..."
+echo "🚀 TutoTuto APIをGoogle Cloud Runにデプロイします..."
 
 # 環境変数の確認
 if [ -z "$GEMINI_API_KEY" ]; then

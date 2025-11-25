@@ -86,7 +86,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
     try {
       // IndexedDBを削除
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase('HomeTeacherDB');
+        const request = indexedDB.deleteDatabase('TutoTutoDB');
         request.onsuccess = () => resolve();
         request.onerror = () => reject(new Error('データベースの削除に失敗しました'));
       });
@@ -145,7 +145,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
 
       if (permission === 'granted') {
         // テスト通知を送信
-        new Notification('HomeTeacher', {
+        new Notification('TutoTuto', {
           body: '通知が有効になりました！時間切れの際にお知らせします。',
           icon: '/pwa-192x192.png'
         });
@@ -711,7 +711,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                   ❌ 通知が拒否されています
                 </div>
                 <div style={{ color: '#721c24', fontSize: '13px' }}>
-                  iPadの設定 → Safari → HomeTeacher から通知を許可してください
+                  iPadの設定 → Safari → TutoTuto から通知を許可してください
                 </div>
               </div>
             )}
