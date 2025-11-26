@@ -795,7 +795,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
         </button>
         <div className="admin-header">
           <div className="logo-container">
-            <img src={`${import.meta.env.BASE_URL}owls_only.bmp`} alt="Tuto Tuto" className="app-logo" />
+            <img src={`${import.meta.env.BASE_URL}owls_only.png`} alt="Tuto Tuto" className="app-logo" />
             <span className="logo-text">TutoTuto</span>
           </div>
 
