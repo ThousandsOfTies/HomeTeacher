@@ -794,7 +794,10 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
           ?
         </button>
         <div className="admin-header">
-          <h1 className="admin-title">Welcome to Home Teacher</h1>
+          <div className="logo-container">
+            <img src={`${import.meta.env.BASE_URL}owls_only.png`} alt="Tuto Tuto" className="app-logo" />
+            <span className="logo-text">TutoTuto</span>
+          </div>
 
           {/* タブ切り替え */}
           <div style={{
@@ -846,277 +849,277 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
           </div>
         </div>
 
-      {/* ドリルモード: PDFリストのみ */}
-      {activeTab === 'drill' && (
-        <div style={{ padding: '20px' }}>
-          <h2 className="section-title">PDF Files</h2>
+        {/* ドリルモード: PDFリストのみ */}
+        {activeTab === 'drill' && (
+          <div style={{ padding: '20px' }}>
+            <h2 className="section-title">PDF Files</h2>
 
-          {pdfRecords.length === 0 ? (
-            <div className="empty-state">
-              <p>No PDF files yet</p>
-            </div>
-          ) : (
-            <div className="pdf-list">
-              {pdfRecords.map((record) => (
-                <div
-                  key={record.id}
-                  className="pdf-list-item"
-                  onClick={() => onSelectPDF(record)}
-                >
-                  <div className="icon-container" style={{
-                    width: '64px',
-                    height: '64px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {record.thumbnail ? (
-                      <img
-                        src={record.thumbnail}
-                        alt={record.fileName}
-                        style={{
-                          maxWidth: '64px',
-                          maxHeight: '64px',
-                          objectFit: 'contain',
-                          borderRadius: '4px',
-                          border: '1px solid #ddd'
-                        }}
-                      />
-                    ) : (
+            {pdfRecords.length === 0 ? (
+              <div className="empty-state">
+                <p>No PDF files yet</p>
+              </div>
+            ) : (
+              <div className="pdf-list">
+                {pdfRecords.map((record) => (
+                  <div
+                    key={record.id}
+                    className="pdf-list-item"
+                    onClick={() => onSelectPDF(record)}
+                  >
+                    <div className="icon-container" style={{
+                      width: '64px',
+                      height: '64px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {record.thumbnail ? (
+                        <img
+                          src={record.thumbnail}
+                          alt={record.fileName}
+                          style={{
+                            maxWidth: '64px',
+                            maxHeight: '64px',
+                            objectFit: 'contain',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd'
+                          }}
+                        />
+                      ) : (
+                        <svg
+                          width="32"
+                          height="32"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#e74c3c"
+                          strokeWidth="2"
+                        >
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                          <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="file-name">{record.fileName}</div>
+                    <button
+                      className="delete-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirm({ id: record.id, fileName: record.fileName });
+                      }}
+                      title="削除"
+                    >
                       <svg
-                        width="32"
-                        height="32"
+                        width="20"
+                        height="20"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="#e74c3c"
+                        stroke="currentColor"
                         strokeWidth="2"
                       >
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
                       </svg>
-                    )}
+                    </button>
                   </div>
-                  <div className="file-name">{record.fileName}</div>
-                  <button
-                    className="delete-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteConfirm({ id: record.id, fileName: record.fileName });
-                    }}
-                    title="削除"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <button className="add-button" onClick={() => handleFileSelect(onSelectPDF)}>
-            <span className="add-button-icon">+</span>
-            <span>PDF</span>
-          </button>
-        </div>
-      )}
-
-      {/* 管理モード: SNS設定、ストレージ情報、採点履歴、広告 */}
-      {activeTab === 'admin' && (
-        <div style={{ padding: '20px' }}>
-          {/* 広告: 上部バナー */}
-          <AdSlot slot="admin-top" />
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '20px',
-            marginTop: '20px'
-          }}>
-            {/* 採点履歴カード */}
-            <button
-              onClick={() => setShowGradingHistory(true)}
-              style={{
-                width: '100%',
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                border: '2px solid #ecf0f1',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#2c3e50',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#9b59b6';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#ecf0f1';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-              title="採点履歴を表示"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>🕒</span>
-                <span>History</span>
-              </div>
-              <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
-            </button>
-
-            {/* ストレージ情報カード */}
-            {storageInfo && (
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                border: '2px solid #ecf0f1'
-              }}>
-                <button
-                  onClick={() => setShowStorageInfo(true)}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: '#2c3e50',
-                    marginBottom: '12px',
-                    transition: 'color 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#3498db';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#2c3e50';
-                  }}
-                  title="ストレージ詳細を表示"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '24px' }}>💾</span>
-                    <span>Storage</span>
-                  </div>
-                  <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
-                </button>
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '14px',
-                  color: '#7f8c8d'
-                }}>
-                  <span>Usage:</span>
-                  <span style={{ fontWeight: '600', color: '#2c3e50' }}>
-                    {storageInfo.usageMB.toFixed(2)} MB / {storageInfo.quotaMB.toFixed(0)} MB
-                  </span>
-                </div>
+                ))}
               </div>
             )}
 
-            {/* SNS Links Section */}
-            <button
-              onClick={() => setShowSNSSettings(true)}
-              style={{
-                width: '100%',
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                border: '2px solid #ecf0f1',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#2c3e50',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#27ae60';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#ecf0f1';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-              title="リンク設定"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>❤️</span>
-                <span>Links ({snsLinks.length})</span>
-              </div>
-              <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
-            </button>
-
-            {/* 通知設定セクション */}
-            <button
-              onClick={() => setShowNotificationSettings(true)}
-              style={{
-                width: '100%',
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                border: '2px solid #ecf0f1',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#2c3e50',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#e74c3c';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#ecf0f1';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-              title="通知設定"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>🔔</span>
-                <span>Notification (for 👨‍👩‍👧‍👦)</span>
-              </div>
-              <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
+            <button className="add-button" onClick={() => handleFileSelect(onSelectPDF)}>
+              <span className="add-button-icon">+</span>
+              <span>PDF</span>
             </button>
           </div>
+        )}
 
-          {/* 広告: 下部 */}
-          <div style={{ marginTop: '20px' }}>
-            <AdSlot slot="admin-sidebar" />
+        {/* 管理モード: SNS設定、ストレージ情報、採点履歴、広告 */}
+        {activeTab === 'admin' && (
+          <div style={{ padding: '20px' }}>
+            {/* 広告: 上部バナー */}
+            <AdSlot slot="admin-top" />
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '20px',
+              marginTop: '20px'
+            }}>
+              {/* 採点履歴カード */}
+              <button
+                onClick={() => setShowGradingHistory(true)}
+                style={{
+                  width: '100%',
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '2px solid #ecf0f1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#2c3e50',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#9b59b6';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#ecf0f1';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                title="採点履歴を表示"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>🕒</span>
+                  <span>History</span>
+                </div>
+                <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
+              </button>
+
+              {/* ストレージ情報カード */}
+              {storageInfo && (
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '2px solid #ecf0f1'
+                }}>
+                  <button
+                    onClick={() => setShowStorageInfo(true)}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      color: '#2c3e50',
+                      marginBottom: '12px',
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#3498db';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#2c3e50';
+                    }}
+                    title="ストレージ詳細を表示"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '24px' }}>💾</span>
+                      <span>Storage</span>
+                    </div>
+                    <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
+                  </button>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: '14px',
+                    color: '#7f8c8d'
+                  }}>
+                    <span>Usage:</span>
+                    <span style={{ fontWeight: '600', color: '#2c3e50' }}>
+                      {storageInfo.usageMB.toFixed(2)} MB / {storageInfo.quotaMB.toFixed(0)} MB
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* SNS Links Section */}
+              <button
+                onClick={() => setShowSNSSettings(true)}
+                style={{
+                  width: '100%',
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '2px solid #ecf0f1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#2c3e50',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#27ae60';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#ecf0f1';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                title="リンク設定"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>❤️</span>
+                  <span>Links ({snsLinks.length})</span>
+                </div>
+                <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
+              </button>
+
+              {/* 通知設定セクション */}
+              <button
+                onClick={() => setShowNotificationSettings(true)}
+                style={{
+                  width: '100%',
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '2px solid #ecf0f1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#2c3e50',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#e74c3c';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#ecf0f1';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                title="通知設定"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '24px' }}>🔔</span>
+                  <span>Notification (for 👨‍👩‍👧‍👦)</span>
+                </div>
+                <span style={{ fontSize: '20px', opacity: 0.5 }}>↗</span>
+              </button>
+            </div>
+
+            {/* 広告: 下部 */}
+            <div style={{ marginTop: '20px' }}>
+              <AdSlot slot="admin-sidebar" />
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
 
       {/* 採点履歴モーダル */}

@@ -25,47 +25,6 @@
   color: white;
   border: none;
   font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
-}
-
-.help-button:hover {
-  background-color: #2980b9;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
-  transform: translateY(-2px);
-}
-
-.admin-header {
-  text-align: center;
-  margin-bottom: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.admin-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.history-button {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -110,7 +69,8 @@
   font-size: 20px;
   font-weight: bold;
   color: #2c3e50;
-  margin: 0 0 12px 0; /* PDFエントリとの間隔 */
+  margin: 0 0 12px 0;
+  /* PDFエントリとの間隔 */
   text-align: center;
 }
 
@@ -204,8 +164,10 @@
   color: #e74c3c;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0; /* ボタンが縮小されないようにする */
-  z-index: 10; /* 親要素より上に表示 */
+  flex-shrink: 0;
+  /* ボタンが縮小されないようにする */
+  z-index: 10;
+  /* 親要素より上に表示 */
 }
 
 .delete-button:hover {
@@ -233,7 +195,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
-  margin-top: 12px; /* PDFエントリとの間隔 */
+  margin-top: 12px;
+  /* PDFエントリとの間隔 */
 }
 
 .add-button:hover {
