@@ -824,7 +824,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               }}
             >
               <span style={{ fontSize: '20px' }}>🖊️</span>
-              ドリルモード
+              Study
             </button>
             <button
               onClick={() => setActiveTab('admin')}
@@ -844,7 +844,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
               }}
             >
               <span style={{ fontSize: '20px' }}>⚙️</span>
-              管理モード
+              Admin
             </button>
           </div>
         </div>
