@@ -57,13 +57,13 @@
 }
 
 .app-logo {
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
 }
 
 .logo-text {
-  font-size: 28px;
+  font-size: 40px;
   font-weight: bold;
   color: #2c3e50;
 }
