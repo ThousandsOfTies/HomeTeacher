@@ -10,16 +10,10 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/HomeTeacher/discuss/logo192.png",
-      "sizes": "192x192",
+      "src": "/HomeTeacher/logo.png",
+      "sizes": "730x779",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/HomeTeacher/discuss/logo512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
