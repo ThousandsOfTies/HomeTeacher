@@ -7,6 +7,66 @@ export type DrawingPath = {
   width: number
 }
 
+// 線分の交差判定
+const doSegmentsIntersect = (
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number },
+  p4: { x: number; y: number }
+): boolean => {
+  const ccw = (A: { x: number; y: number }, B: { x: number; y: number }, C: { x: number; y: number }) => {
+    return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x)
+  }
+  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4)
+}
+
+// パス同士が交差しているか判定
+const doPathsIntersect = (path1: DrawingPath, path2: DrawingPath): boolean => {
+  // パス1の各線分とパス2の各線分を比較
+  for (let i = 0; i < path1.points.length - 1; i++) {
+    for (let j = 0; j < path2.points.length - 1; j++) {
+      if (doSegmentsIntersect(
+        path1.points[i],
+        path1.points[i + 1],
+        path2.points[j],
+        path2.points[j + 1]
+      )) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+// スクラッチパターンを検出（往復する動きを検出）
+const isScratchPattern = (path: DrawingPath): boolean => {
+  const points = path.points
+
+  // 最低10ポイント必要
+  if (points.length < 10) return false
+
+  // 総移動距離を計算
+  let totalDistance = 0
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x
+    const dy = points[i].y - points[i - 1].y
+    totalDistance += Math.sqrt(dx * dx + dy * dy)
+  }
+
+  // 始点と終点の距離を計算
+  const startToEndDistance = Math.sqrt(
+    Math.pow(points[points.length - 1].x - points[0].x, 2) +
+    Math.pow(points[points.length - 1].y - points[0].y, 2)
+  )
+
+  // 総移動距離に対して始点-終点距離が十分小さければスクラッチと判定
+  // （往復している = 始点と終点が近い）
+  const ratio = startToEndDistance / totalDistance
+
+  // 比率が0.3以下ならスクラッチと判定（調整可能）
+  return ratio < 0.3 && totalDistance > 0.05 // 総距離が一定以上あることも確認
+}
+
 export const useDrawing = (pageNum: number) => {
   const [drawingPaths, setDrawingPaths] = useState<Map<number, DrawingPath[]>>(new Map())
   const [isCurrentlyDrawing, setIsCurrentlyDrawing] = useState(false)
@@ -83,12 +143,40 @@ export const useDrawing = (pageNum: number) => {
       setDrawingPaths(prev => {
         const newMap = new Map(prev)
         const currentPaths = newMap.get(pageNum) || []
-        const newPaths = [...currentPaths, newPath]
-        newMap.set(pageNum, newPaths)
 
-        // 履歴に保存
-        if (onSave) {
-          onSave(newPaths)
+        // スクラッチパターンを検出
+        if (isScratchPattern(newPath)) {
+          console.log('✨ スクラッチパターンを検出: 交差する線を削除します')
+
+          // 交差する既存のパスを探して削除
+          const pathsToKeep = currentPaths.filter(existingPath => {
+            const intersects = doPathsIntersect(newPath, existingPath)
+            if (intersects) {
+              console.log('🗑️ 交差するパスを削除しました')
+            }
+            return !intersects
+          })
+
+          // スクラッチパス自体は保存しない（消しゴムとして使用したため）
+          if (pathsToKeep.length === 0) {
+            newMap.delete(pageNum)
+          } else {
+            newMap.set(pageNum, pathsToKeep)
+          }
+
+          // 履歴に保存
+          if (onSave) {
+            onSave(pathsToKeep)
+          }
+        } else {
+          // 通常の描画パス
+          const newPaths = [...currentPaths, newPath]
+          newMap.set(pageNum, newPaths)
+
+          // 履歴に保存
+          if (onSave) {
+            onSave(newPaths)
+          }
         }
 
         return newMap

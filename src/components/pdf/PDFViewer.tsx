@@ -113,7 +113,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
-  const [isDrawingMode, setIsDrawingMode] = useState(false)
+  const [isDrawingMode, setIsDrawingMode] = useState(true)  // デフォルトでペンモードON
   const [isEraserMode, setIsEraserMode] = useState(false)
 
   // 2本指タップ検出用
