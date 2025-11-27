@@ -42,29 +42,40 @@ const doPathsIntersect = (path1: DrawingPath, path2: DrawingPath): boolean => {
 const isScratchPattern = (path: DrawingPath): boolean => {
   const points = path.points
 
-  // 最低10ポイント必要
-  if (points.length < 10) return false
+  // 最低15ポイント必要（短すぎる線はスクラッチではない）
+  if (points.length < 15) return false
 
-  // 総移動距離を計算
-  let totalDistance = 0
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i].x - points[i - 1].x
-    const dy = points[i].y - points[i - 1].y
-    totalDistance += Math.sqrt(dx * dx + dy * dy)
+  // 進行方向の角度を計算し、方向転換の回数を数える
+  let directionChanges = 0
+  let prevAngle: number | null = null
+
+  for (let i = 2; i < points.length; i++) {
+    const dx = points[i].x - points[i - 2].x
+    const dy = points[i].y - points[i - 2].y
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    // 距離が短すぎる場合はスキップ（ノイズ除去）
+    if (distance < 0.005) continue
+
+    const angle = Math.atan2(dy, dx)
+
+    if (prevAngle !== null) {
+      // 角度の差を計算（-π ～ π の範囲に正規化）
+      let angleDiff = angle - prevAngle
+      while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI
+      while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI
+
+      // 90度以上の方向転換をカウント
+      if (Math.abs(angleDiff) > Math.PI / 2) {
+        directionChanges++
+      }
+    }
+
+    prevAngle = angle
   }
 
-  // 始点と終点の距離を計算
-  const startToEndDistance = Math.sqrt(
-    Math.pow(points[points.length - 1].x - points[0].x, 2) +
-    Math.pow(points[points.length - 1].y - points[0].y, 2)
-  )
-
-  // 総移動距離に対して始点-終点距離が十分小さければスクラッチと判定
-  // （往復している = 始点と終点が近い）
-  const ratio = startToEndDistance / totalDistance
-
-  // 比率が0.3以下ならスクラッチと判定（調整可能）
-  return ratio < 0.3 && totalDistance > 0.05 // 総距離が一定以上あることも確認
+  // 2往復 = 約4回以上の方向転換
+  return directionChanges >= 4
 }
 
 export const useDrawing = (pageNum: number) => {
@@ -146,9 +157,9 @@ export const useDrawing = (pageNum: number) => {
 
         // スクラッチパターンを検出
         if (isScratchPattern(newPath)) {
-          console.log('✨ スクラッチパターンを検出: 交差する線を削除します')
+          console.log('✨ スクラッチパターンを検出しました')
 
-          // 交差する既存のパスを探して削除
+          // 交差する既存のパスを探す
           const pathsToKeep = currentPaths.filter(existingPath => {
             const intersects = doPathsIntersect(newPath, existingPath)
             if (intersects) {
@@ -157,16 +168,32 @@ export const useDrawing = (pageNum: number) => {
             return !intersects
           })
 
-          // スクラッチパス自体は保存しない（消しゴムとして使用したため）
-          if (pathsToKeep.length === 0) {
-            newMap.delete(pageNum)
-          } else {
-            newMap.set(pageNum, pathsToKeep)
-          }
+          // 交差する線があった場合のみ消しゴムとして機能
+          const hadIntersections = pathsToKeep.length < currentPaths.length
 
-          // 履歴に保存
-          if (onSave) {
-            onSave(pathsToKeep)
+          if (hadIntersections) {
+            console.log('✅ スクラッチで消去を実行しました')
+            // スクラッチパス自体は保存しない（消しゴムとして使用したため）
+            if (pathsToKeep.length === 0) {
+              newMap.delete(pageNum)
+            } else {
+              newMap.set(pageNum, pathsToKeep)
+            }
+
+            // 履歴に保存
+            if (onSave) {
+              onSave(pathsToKeep)
+            }
+          } else {
+            // 交差がない場合は通常の描画として保存
+            console.log('ℹ️ 交差する線がないため、通常の描画として保存します')
+            const newPaths = [...currentPaths, newPath]
+            newMap.set(pageNum, newPaths)
+
+            // 履歴に保存
+            if (onSave) {
+              onSave(newPaths)
+            }
           }
         } else {
           // 通常の描画パス
