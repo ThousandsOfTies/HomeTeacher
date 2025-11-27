@@ -35,7 +35,8 @@ jobs:
       - name: Move Kids build to deploy directory
         run: |
           mkdir -p deploy
-          mv dist deploy/
+          cp -r dist/* deploy/
+          rm -rf dist
 
       - name: Build Discuss version
         run: npm run build:discuss
@@ -43,7 +44,10 @@ jobs:
           NODE_ENV: production
 
       - name: Move Discuss build to deploy/discuss
-        run: mv dist deploy/discuss
+        run: |
+          mkdir -p deploy/discuss
+          cp -r dist/* deploy/discuss/
+          rm -rf dist
 
       - name: List deploy directory
         run: ls -la deploy/
