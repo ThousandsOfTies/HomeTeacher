@@ -2,6 +2,18 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { APP_NAME, APP_DESCRIPTION, THEME_COLOR } from './config/features'
+
+// アプリ名とテーマカラーを動的に設定
+document.title = APP_NAME
+const metaDescription = document.querySelector('meta[name="description"]')
+if (metaDescription) {
+  metaDescription.setAttribute('content', APP_DESCRIPTION)
+}
+const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+if (metaThemeColor) {
+  metaThemeColor.setAttribute('content', THEME_COLOR)
+}
 
 // グローバルエラーハンドラー
 window.addEventListener('error', (event) => {

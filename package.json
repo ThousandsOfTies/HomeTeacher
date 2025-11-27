@@ -5,11 +5,17 @@
   "description": "AI-powered drill grading app with handwriting support",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --mode kids",
+    "dev:discuss": "vite --mode discuss",
     "dev:server": "tsx watch server/index.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build --mode kids",
+    "build:kids": "tsc && vite build --mode kids",
+    "build:discuss": "tsc && vite build --mode discuss",
+    "build:all": "npm run build:kids && npm run build:discuss",
     "preview": "vite preview",
+    "preview:kids": "vite preview --mode kids",
+    "preview:discuss": "vite preview --mode discuss",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {

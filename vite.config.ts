@@ -1,11 +1,21 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  base: '/HomeTeacher/',
+export default defineConfig(({ mode }) => {
+  // 環境変数を読み込む
+  const env = loadEnv(mode, process.cwd(), '')
+  const isDiscuss = mode === 'discuss'
+  const basePath = isDiscuss ? '/HomeTeacher/discuss/' : '/HomeTeacher/'
+  const appName = env.VITE_APP_NAME || 'TutoTuto'
+  const themeColor = env.VITE_THEME_COLOR || '#3498db'
+
+  console.log(`📦 Building ${appName} (mode: ${mode})`)
+
+  return {
+  base: basePath,
   plugins: [
     react(),
     viteStaticCopy({
@@ -25,14 +35,14 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'TutoTuto - AI Drill Grading App',
-        short_name: 'TutoTuto',
-        description: 'AI-powered drill grading app with handwriting support',
-        theme_color: '#4A90E2',
-        background_color: '#4A90E2',
-        display: 'minimal-ui',
-        start_url: '/HomeTeacher/',
-        scope: '/HomeTeacher/',
+        name: appName,
+        short_name: isDiscuss ? 'TutoTuto Discuss' : 'TutoTuto',
+        description: env.VITE_APP_DESCRIPTION || 'AI-powered drill grading app with handwriting support',
+        theme_color: themeColor,
+        background_color: themeColor,
+        display: 'standalone',
+        start_url: basePath,
+        scope: basePath,
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -107,4 +117,5 @@ export default defineConfig({
     include: ['pdfjs-dist'],
   },
   assetsInclude: ['**/*.pdf'],
+  }
 })

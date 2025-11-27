@@ -1,0 +1,25 @@
+{
+  "name": "TutoTuto Discuss",
+  "short_name": "TutoTuto Discuss",
+  "description": "大人向け学習・ディスカッション支援アプリ",
+  "start_url": "/HomeTeacher/discuss/",
+  "scope": "/HomeTeacher/discuss/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2ecc71",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/HomeTeacher/discuss/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/HomeTeacher/discuss/logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
