@@ -49,8 +49,17 @@ jobs:
           cp -r dist/* deploy/discuss/
           rm -rf dist
 
-      - name: List deploy directory
-        run: ls -la deploy/
+      - name: Verify deploy structure
+        run: |
+          echo "=== Deploy root ==="
+          ls -la deploy/ | head -20
+          echo ""
+          echo "=== Discuss directory ==="
+          ls -la deploy/discuss/ | head -20
+          echo ""
+          echo "=== Checking for unwanted files ==="
+          if [ -d "deploy/node_modules" ]; then echo "WARNING: node_modules found!"; fi
+          if [ -d "deploy/dist" ]; then echo "WARNING: dist directory found!"; fi
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
