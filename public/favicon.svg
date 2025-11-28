@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 背景円（暖色系：オレンジレッド） -->
+  <circle cx="100" cy="100" r="95" fill="#FF6B6B"/>
+
+  <!-- 大きいふくろう（先生） -->
+  <g id="parent-owl">
+    <!-- 体 -->
+    <ellipse cx="70" cy="110" rx="35" ry="45" fill="#FFA726"/>
+    <!-- 頭 -->
+    <circle cx="70" cy="75" r="28" fill="#FFA726"/>
+    <!-- 目（左） -->
+    <circle cx="62" cy="72" r="8" fill="white"/>
+    <circle cx="62" cy="72" r="4" fill="#333"/>
+    <!-- 目（右） -->
+    <circle cx="78" cy="72" r="8" fill="white"/>
+    <circle cx="78" cy="72" r="4" fill="#333"/>
+    <!-- くちばし -->
+    <polygon points="70,78 67,82 73,82" fill="#FF6F00"/>
+    <!-- 耳の房（左） -->
+    <ellipse cx="55" cy="55" rx="5" ry="12" fill="#FF8A50" transform="rotate(-15 55 55)"/>
+    <!-- 耳の房（右） -->
+    <ellipse cx="85" cy="55" rx="5" ry="12" fill="#FF8A50" transform="rotate(15 85 55)"/>
+    <!-- 翼 -->
+    <ellipse cx="45" cy="110" rx="12" ry="25" fill="#FF8A50"/>
+    <ellipse cx="95" cy="110" rx="12" ry="25" fill="#FF8A50"/>
+  </g>
+
+  <!-- 小さいふくろう（生徒） -->
+  <g id="child-owl">
+    <!-- 体 -->
+    <ellipse cx="130" cy="120" rx="25" ry="32" fill="#FFB74D"/>
+    <!-- 頭 -->
+    <circle cx="130" cy="95" r="20" fill="#FFB74D"/>
+    <!-- 目（左） -->
+    <circle cx="124" cy="93" r="6" fill="white"/>
+    <circle cx="124" cy="93" r="3" fill="#333"/>
+    <!-- 目（右） -->
+    <circle cx="136" cy="93" r="6" fill="white"/>
+    <circle cx="136" cy="93" r="3" fill="#333"/>
+    <!-- くちばし -->
+    <polygon points="130,98 128,101 132,101" fill="#FF6F00"/>
+    <!-- 耳の房（左） -->
+    <ellipse cx="120" cy="82" rx="4" ry="9" fill="#FFCC80" transform="rotate(-15 120 82)"/>
+    <!-- 耳の房（右） -->
+    <ellipse cx="140" cy="82" rx="4" ry="9" fill="#FFCC80" transform="rotate(15 140 82)"/>
+    <!-- 翼 -->
+    <ellipse cx="110" cy="120" rx="9" ry="18" fill="#FFCC80"/>
+    <ellipse cx="150" cy="120" rx="9" ry="18" fill="#FFCC80"/>
+  </g>
+</svg>
