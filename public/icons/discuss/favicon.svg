@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 背景円（暖色系：オレンジレッド） -->
-  <circle cx="100" cy="100" r="95" fill="#FF6B6B"/>
+  <!-- 背景円（寒色系：緑） -->
+  <circle cx="100" cy="100" r="95" fill="#2ecc71"/>
 
   <!-- 大きいふくろう（先生） -->
   <g id="parent-owl">
