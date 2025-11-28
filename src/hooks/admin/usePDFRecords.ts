@@ -79,10 +79,49 @@ export const usePDFRecords = () => {
           const input = document.createElement('input')
           input.type = 'file'
           input.accept = 'application/pdf'
+
+          // ファイル選択イベント
           input.onchange = (e) => {
             const selectedFile = (e.target as HTMLInputElement).files?.[0]
             resolve(selectedFile || null)
           }
+
+          // キャンセルイベント（ファイル選択ダイアログを閉じた時）
+          input.oncancel = () => {
+            resolve(null)
+          }
+
+          // フォーカスが戻った時にキャンセル判定（フォールバック）
+          // ファイル選択ダイアログが開いている間はフォーカスが外れるため、
+          // 一定時間後にフォーカスが戻ってきてファイルが選択されていない場合はキャンセルと判定
+          let focusCheckTimeout: NodeJS.Timeout | null = null
+          const handleFocus = () => {
+            focusCheckTimeout = setTimeout(() => {
+              if (!input.files || input.files.length === 0) {
+                resolve(null)
+              }
+            }, 300)
+          }
+
+          // クリーンアップ
+          const cleanup = () => {
+            if (focusCheckTimeout) clearTimeout(focusCheckTimeout)
+            window.removeEventListener('focus', handleFocus)
+          }
+
+          // onchangeまたはoncancelが呼ばれたらクリーンアップ
+          const originalOnChange = input.onchange
+          input.onchange = (e) => {
+            cleanup()
+            if (originalOnChange) originalOnChange(e)
+          }
+          const originalOnCancel = input.oncancel
+          input.oncancel = () => {
+            cleanup()
+            if (originalOnCancel) originalOnCancel()
+          }
+
+          window.addEventListener('focus', handleFocus, { once: true })
           input.click()
         })
 
