@@ -67,6 +67,8 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
 
   // ドラッグ開始
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setIsDragging(true)
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
@@ -82,6 +84,9 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
     const handleDragMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return
 
+      e.preventDefault()
+      e.stopPropagation()
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
@@ -96,9 +101,9 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
     }
 
     if (isDragging) {
-      document.addEventListener('mousemove', handleDragMove)
+      document.addEventListener('mousemove', handleDragMove, { passive: false })
       document.addEventListener('mouseup', handleDragEnd)
-      document.addEventListener('touchmove', handleDragMove)
+      document.addEventListener('touchmove', handleDragMove, { passive: false })
       document.addEventListener('touchend', handleDragEnd)
     }
 
@@ -136,6 +141,15 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
           transform: `translate(${position.x}px, ${position.y}px)`,
           cursor: isDragging ? 'grabbing' : 'default',
           pointerEvents: 'auto'
+        }}
+        onWheel={(e) => {
+          e.stopPropagation()
+        }}
+        onMouseMove={(e) => {
+          e.stopPropagation()
+        }}
+        onTouchMove={(e) => {
+          e.stopPropagation()
         }}
       >
         <div
