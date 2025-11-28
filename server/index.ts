@@ -138,11 +138,11 @@ app.post('/api/grade', async (req, res) => {
     fs.writeFileSync(debugImagePath, Buffer.from(base64Data, 'base64'))
     console.log(`🖼️ デバッグ画像を保存: ${debugImagePath}`)
 
-    // Gemini 3.0 Pro モデルを使用（最新・最高精度）
-    // 優先: gemini-3-pro-preview (Gemini 3.0、数学20倍改善)
-    // フォールバック: gemini-2.0-flash (安定版、コスト重視)
+    // Gemini 2.5 Flash モデルを使用（最新・高速・高性能）
+    // 優先: gemini-2.5-flash (最新安定版、2025年GA)
+    // フォールバック: gemini-2.0-flash (旧安定版)
     // .envで GEMINI_MODEL を設定して切り替え可能
-    const preferredModelName = process.env.GEMINI_MODEL || 'gemini-3-pro-preview'
+    const preferredModelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
     const fallbackModelName = 'gemini-2.0-flash'
 
     console.log(`🤖 優先モデル: ${preferredModelName}`)
