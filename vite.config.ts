@@ -6,7 +6,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // 環境変数を読み込む
-  const env = loadEnv(mode, process.cwd(), '')
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
   const isDiscuss = mode === 'discuss'
   const basePath = isDiscuss ? '/HomeTeacher/discuss/' : '/HomeTeacher/'
   const appName = env.VITE_APP_NAME || 'TutoTuto'
