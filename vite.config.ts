@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
@@ -14,10 +14,19 @@ export default defineConfig(({ mode }) => {
 
   console.log(`📦 Building ${appName} (mode: ${mode})`)
 
+  // HTMLを動的に変換するプラグイン
+  const htmlTransformPlugin: Plugin = {
+    name: 'html-transform',
+    transformIndexHtml(html) {
+      return html.replace(/\/HomeTeacher\/logo\.png/g, `${basePath}logo.png`)
+    }
+  }
+
   return {
   base: basePath,
   plugins: [
     react(),
+    htmlTransformPlugin,
     viteStaticCopy({
       targets: [
         {
@@ -33,7 +42,7 @@ export default defineConfig(({ mode }) => {
         enabled: false
       },
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['logo.png'],
       manifest: {
         name: appName,
         short_name: isDiscuss ? 'TutoTuto Discuss' : 'TutoTuto',
@@ -45,20 +54,9 @@ export default defineConfig(({ mode }) => {
         scope: basePath,
         icons: [
           {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
+            src: `${basePath}logo.png`,
+            sizes: '730x779',
             type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
           }
         ]
       },
