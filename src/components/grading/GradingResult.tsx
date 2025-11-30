@@ -3,7 +3,6 @@ import { GradingResult as GradingResultType } from '../../services/api'
 import { SNSLinkRecord } from '../../utils/indexedDB'
 import { getSNSIcon } from '../../constants/sns'
 import './GradingResult.css'
-import * as SimpleIcons from 'simple-icons'
 
 interface GradingResultProps {
   result: GradingResultType | null
@@ -117,12 +116,17 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
         }}
         onWheel={(e) => {
           e.stopPropagation()
+          e.preventDefault()
         }}
         onMouseMove={(e) => {
           e.stopPropagation()
         }}
+        onTouchStart={(e) => {
+          e.stopPropagation()
+        }}
         onTouchMove={(e) => {
           e.stopPropagation()
+          e.preventDefault()
         }}
       >
         <div
@@ -151,7 +155,15 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
           </button>
         </div>
 
-        <div className="result-content">
+        <div
+          className="result-content"
+          onTouchStart={(e) => {
+            e.stopPropagation()
+          }}
+          onWheel={(e) => {
+            e.stopPropagation()
+          }}
+        >
           {validProblems.length > 0 ? (
             <div className="problems-list">
               {validProblems.map((problem, index) => (
