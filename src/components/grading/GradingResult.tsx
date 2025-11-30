@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { GradingResult as GradingResultType } from '../../services/api'
 import { SNSLinkRecord } from '../../utils/indexedDB'
+import { getSNSIcon } from '../../constants/sns'
 import './GradingResult.css'
 import * as SimpleIcons from 'simple-icons'
 
@@ -9,46 +10,6 @@ interface GradingResultProps {
   onClose: () => void
   snsLinks?: SNSLinkRecord[]
   timeLimitMinutes?: number // SNS利用時間制限（分）
-}
-
-// SNS名からSimple Iconsのアイコンを取得
-const getSNSIcon = (name: string): { svg: string; color: string } | null => {
-  // 名前を正規化（小文字化、スペース除去）
-  const normalizedName = name.toLowerCase().replace(/\s+/g, '')
-
-  // よく使われるSNSのマッピング
-  const iconMap: Record<string, string> = {
-    'x': 'siX',
-    'twitter': 'siX',
-    'x(twitter)': 'siX',  // 'X (Twitter)' の正規化形
-    'youtube': 'siYoutube',
-    'instagram': 'siInstagram',
-    'facebook': 'siFacebook',
-    'tiktok': 'siTiktok',
-    'github': 'siGithub',
-    'discord': 'siDiscord',
-    'twitch': 'siTwitch',
-    'linkedin': 'siLinkedin',
-    'reddit': 'siReddit',
-    'note': 'siNote',
-    'line': 'siLine',
-    'zenn': 'siZenn',
-    'qiita': 'siQiita',
-    'amazon': 'siAmazon',
-    'niconico': 'siNiconico',
-    'pixiv': 'siPixiv'
-  }
-
-  const iconKey = iconMap[normalizedName]
-  if (iconKey && iconKey in SimpleIcons) {
-    const icon = SimpleIcons[iconKey as keyof typeof SimpleIcons] as SimpleIcons.SimpleIcon
-    return {
-      svg: icon.svg,
-      color: `#${icon.hex}`
-    }
-  }
-
-  return null
 }
 
 const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }: GradingResultProps) => {
@@ -124,13 +85,18 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
 
   // SNS選択画面（警告ページ）を開く
   const openSNSSelectionPage = () => {
-    // SNSリンク情報をJSON形式でURLパラメータに渡す
-    const snsLinksJson = JSON.stringify(snsLinks.map(link => ({
-      id: link.id,
-      name: link.name,
-      url: link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : 'https://' + link.url,
-      icon: link.icon
-    })))
+    // SNSリンク情報をJSON形式でURLパラメータに渡す（SVGとカラー情報も含む）
+    const snsLinksJson = JSON.stringify(snsLinks.map(link => {
+      const snsIcon = getSNSIcon(link.id)
+      return {
+        id: link.id,
+        name: link.name,
+        url: link.url.startsWith('http://') || link.url.startsWith('https://') ? link.url : 'https://' + link.url,
+        icon: link.icon, // 絵文字（フォールバック用）
+        svg: snsIcon?.svg || null, // SVGデータ
+        color: snsIcon?.color || '#666' // ブランドカラー
+      }
+    }))
 
     // 警告ページへ遷移（SNS選択UIを表示）
     const warningUrl = `${window.location.origin}${import.meta.env.BASE_URL || '/'}warning.html?time=${timeLimitMinutes}&snsLinks=${encodeURIComponent(snsLinksJson)}`

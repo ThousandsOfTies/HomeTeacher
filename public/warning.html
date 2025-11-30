@@ -117,6 +117,15 @@
     }
     .sns-icon {
       font-size: 48px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sns-icon svg {
+      width: 100%;
+      height: 100%;
     }
     .sns-button-name {
       font-size: 14px;
@@ -186,8 +195,14 @@
       console.log(`  📌 SNS ${index + 1}:`, link);
       const button = document.createElement('button');
       button.className = 'sns-button';
+
+      // SVGがある場合はSVGアイコンを使用、なければ絵文字にフォールバック
+      const iconHtml = link.svg
+        ? `<div class="sns-icon" style="color: ${link.color}; fill: ${link.color};">${link.svg}</div>`
+        : `<div class="sns-icon">${link.icon || '🌐'}</div>`;
+
       button.innerHTML = `
-        <div class="sns-icon">${link.icon || '🌐'}</div>
+        ${iconHtml}
         <div class="sns-button-name">${link.name}</div>
       `;
 
@@ -400,13 +415,12 @@
           stopWarnings();
 
           // ドリル画面に戻る
-          // キャッシュバスティング用のタイムスタンプを追加してリソースを確実に再読み込み
           const pathParts = window.location.pathname.split('/');
           pathParts.pop(); // warning.htmlを削除
           const baseUrl = window.location.origin + pathParts.join('/') + '/';
 
-          // タイムスタンプ付きで遷移（PDFやWorkerのキャッシュ問題を回避）
-          window.location.replace(baseUrl + '?t=' + Date.now());
+          // 管理画面に戻る
+          window.location.replace(baseUrl);
         }
       } else {
         // バックグラウンドに移動（SNSタブを開いた）
