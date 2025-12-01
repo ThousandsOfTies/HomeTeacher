@@ -52,6 +52,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
   const [showStorageInfo, setShowStorageInfo] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [snsTimeLimit, setSnsTimeLimit] = useState<number>(30); // デフォルト30分
+  const [snsTimeLimitInput, setSnsTimeLimitInput] = useState<string>('30'); // 入力フィールド用
 
   // Load data on mount
   useEffect(() => {
@@ -70,10 +71,12 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
     try {
       const settings = await getAppSettings();
       setSnsTimeLimit(settings.snsTimeLimitMinutes);
+      setSnsTimeLimitInput(String(settings.snsTimeLimitMinutes));
     } catch (error) {
       console.error('Failed to load settings:', error);
       // エラーの場合はデフォルト値を使用
       setSnsTimeLimit(30);
+      setSnsTimeLimitInput('30');
       // データベースを再作成する必要がある場合
       if (error instanceof Error && error.message.includes('object stores was not found')) {
         console.log('⚠️ データベースの再作成が必要です。ブラウザをリロードしてください。');
@@ -317,8 +320,21 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
                     type="number"
                     min="1"
                     max="120"
-                    value={snsTimeLimit}
-                    onChange={(e) => setSnsTimeLimit(Math.max(1, Math.min(120, parseInt(e.target.value) || 1)))}
+                    value={snsTimeLimitInput}
+                    onChange={(e) => setSnsTimeLimitInput(e.target.value)}
+                    onBlur={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (isNaN(value) || value < 1) {
+                        setSnsTimeLimit(1);
+                        setSnsTimeLimitInput('1');
+                      } else if (value > 120) {
+                        setSnsTimeLimit(120);
+                        setSnsTimeLimitInput('120');
+                      } else {
+                        setSnsTimeLimit(value);
+                        setSnsTimeLimitInput(String(value));
+                      }
+                    }}
                     style={{
                       width: '80px',
                       padding: '8px',
