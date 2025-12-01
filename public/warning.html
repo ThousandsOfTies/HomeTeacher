@@ -168,8 +168,9 @@
     const params = new URLSearchParams(window.location.search);
     const timeLimitMinutes = parseInt(params.get('time') || '30');
     const snsLinksJson = params.get('snsLinks');
+    const returnUrl = params.get('returnUrl'); // 戻り先URL
 
-    console.log('📱 URLパラメータ:', { timeLimitMinutes, snsLinksJson });
+    console.log('📱 URLパラメータ:', { timeLimitMinutes, snsLinksJson, returnUrl });
 
     document.getElementById('timeLimit').textContent = `制限時間: ${timeLimitMinutes}分`;
 
@@ -415,12 +416,24 @@
           stopWarnings();
 
           // ドリル画面に戻る
-          const pathParts = window.location.pathname.split('/');
-          pathParts.pop(); // warning.htmlを削除
-          const baseUrl = window.location.origin + pathParts.join('/') + '/';
+          // returnUrlパラメータがあればそれを使用（確実性向上）、なければ従来の方法
+          let baseUrl;
+          if (returnUrl) {
+            baseUrl = returnUrl;
+            console.log('✅ returnUrlパラメータを使用:', baseUrl);
+          } else {
+            // フォールバック: 従来の方法
+            const pathParts = window.location.pathname.split('/');
+            pathParts.pop(); // warning.htmlを削除
+            baseUrl = window.location.origin + pathParts.join('/') + '/';
+            console.log('⚠️ returnUrlパラメータなし、従来の方法を使用:', baseUrl);
+          }
 
-          // 管理画面に戻る
-          window.location.replace(baseUrl);
+          // iPad対応: 少し待機してからリロード（IndexedDBの準備を待つ）
+          setTimeout(() => {
+            console.log('🏠 ドリル画面に戻ります:', baseUrl);
+            window.location.replace(baseUrl);
+          }, 300);
         }
       } else {
         // バックグラウンドに移動（SNSタブを開いた）
