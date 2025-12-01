@@ -419,8 +419,10 @@
           pathParts.pop(); // warning.htmlを削除
           const baseUrl = window.location.origin + pathParts.join('/') + '/';
 
-          // 管理画面に戻る
-          window.location.replace(baseUrl);
+          // iPad対応: 少し待機してからリロード（IndexedDBの準備を待つ）
+          setTimeout(() => {
+            window.location.replace(baseUrl);
+          }, 300);
         }
       } else {
         // バックグラウンドに移動（SNSタブを開いた）
