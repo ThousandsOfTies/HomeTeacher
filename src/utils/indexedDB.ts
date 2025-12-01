@@ -48,13 +48,30 @@ export interface AppSettings {
 // データベースを開く
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    console.log('🔓 IndexedDB開く:', {
+      dbName: DB_NAME,
+      version: DB_VERSION,
+      url: window.location.href,
+      timestamp: new Date().toISOString()
+    });
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
+      console.error('❌ IndexedDB開くエラー:', {
+        error: request.error,
+        dbName: DB_NAME,
+        version: DB_VERSION
+      });
       reject(new Error('IndexedDBを開けませんでした'));
     };
 
     request.onsuccess = () => {
+      console.log('✅ IndexedDB開く成功:', {
+        dbName: request.result.name,
+        version: request.result.version,
+        objectStoreNames: Array.from(request.result.objectStoreNames)
+      });
       resolve(request.result);
     };
 
@@ -138,14 +155,24 @@ export async function getAllPDFRecords(): Promise<PDFFileRecord[]> {
     request.onsuccess = (event) => {
       const cursor = (event.target as IDBRequest).result;
       if (cursor) {
-        records.push(cursor.value);
+        const record = cursor.value;
+        console.log('📄 PDFレコード取得:', {
+          id: record.id,
+          fileName: record.fileName,
+          hasFileData: !!record.fileData,
+          fileDataType: record.fileData ? (record.fileData instanceof Blob ? 'Blob' : typeof record.fileData) : 'null',
+          fileDataSize: record.fileData instanceof Blob ? record.fileData.size : 'N/A'
+        });
+        records.push(record);
         cursor.continue();
       } else {
+        console.log(`✅ 全PDFレコード取得完了: ${records.length}件`);
         resolve(records);
       }
     };
 
     request.onerror = () => {
+      console.error('❌ PDFレコード取得エラー:', request.error);
       reject(new Error('レコードの取得に失敗しました'));
     };
   });
