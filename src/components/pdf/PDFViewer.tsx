@@ -168,6 +168,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const [isGrading, setIsGrading] = useState(false)
   const [gradingResult, setGradingResult] = useState<GradingResultType | null>(null)
   const [gradingError, setGradingError] = useState<string | null>(null)
+  const [gradingModelName, setGradingModelName] = useState<string | null>(null)
+  const [gradingResponseTime, setGradingResponseTime] = useState<number | null>(null)
 
   // useSelection hook を使用して矩形選択機能を管理
   const {
@@ -1254,6 +1256,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       if (response.success) {
         setGradingResult(response.result)
         setGradingError(null)
+        setGradingModelName(response.modelName || null)
+        setGradingResponseTime(response.responseTime || null)
         // 採点成功後も選択モード（採点モード）を維持（連続して再採点できるように）
 
         // 採点履歴を保存
@@ -1682,6 +1686,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             onClose={() => setGradingResult(null)}
             snsLinks={snsLinks}
             timeLimitMinutes={snsTimeLimit}
+            modelName={gradingModelName}
+            responseTime={gradingResponseTime}
           />
         )}
 

@@ -9,9 +9,11 @@ interface GradingResultProps {
   onClose: () => void
   snsLinks?: SNSLinkRecord[]
   timeLimitMinutes?: number // SNS利用時間制限（分）
+  modelName?: string | null
+  responseTime?: number | null
 }
 
-const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }: GradingResultProps) => {
+const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30, modelName, responseTime }: GradingResultProps) => {
   if (!result) return null
 
   // ドラッグ位置の状態管理
@@ -264,6 +266,28 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30 }
               }}
             >
               📱 SNSを見る
+            </button>
+          </div>
+        )}
+
+        {(modelName || responseTime !== null) && (
+          <div className="model-info-footer">
+            <div className="model-info-container">
+              {modelName && (
+                <div className="model-info-item">
+                  <span className="model-info-label">使用モデル:</span>
+                  <span className="model-info-value">{modelName}</span>
+                </div>
+              )}
+              {responseTime !== null && responseTime !== undefined && (
+                <div className="model-info-item">
+                  <span className="model-info-label">レスポンス時間:</span>
+                  <span className="model-info-value">{responseTime}秒</span>
+                </div>
+              )}
+            </div>
+            <button className="footer-close-btn" onClick={onClose}>
+              閉じる
             </button>
           </div>
         )}
