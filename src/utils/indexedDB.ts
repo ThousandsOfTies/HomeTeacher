@@ -1,11 +1,12 @@
 // IndexedDB管理ユーティリティ
 
 const DB_NAME = 'TutoTutoDB';
-const DB_VERSION = 7; // バージョンを上げて設定ストア追加
+const DB_VERSION = 8; // バージョンを上げてSNS履歴ストア追加
 const STORE_NAME = 'pdfFiles';
 const SNS_STORE_NAME = 'snsLinks';
 const GRADING_HISTORY_STORE_NAME = 'gradingHistory';
 const SETTINGS_STORE_NAME = 'settings';
+const SNS_USAGE_HISTORY_STORE_NAME = 'snsUsageHistory';
 
 export interface PDFFileRecord {
   id: string; // ユニークID (ファイル名 + タイムスタンプ)
@@ -44,6 +45,15 @@ export interface AppSettings {
   id: 'app-settings'; // 固定ID
   snsTimeLimitMinutes: number; // SNS利用制限時間（分）
   notificationEnabled: boolean; // 通知の有効/無効
+}
+
+export interface SNSUsageHistoryRecord {
+  id: string; // ユニークID
+  snsId: string; // SNSのID
+  snsName: string; // SNS名（例: YouTube, Twitter）
+  snsUrl: string; // アクセスしたURL
+  timeLimitMinutes: number; // 設定されていた制限時間（分）
+  timestamp: number; // アクセス日時（タイムスタンプ）
 }
 
 // データベースを開く
@@ -103,6 +113,13 @@ function openDB(): Promise<IDBDatabase> {
       // 設定用オブジェクトストアが存在しない場合は作成
       if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
         db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'id' });
+      }
+
+      // SNS利用履歴用オブジェクトストアが存在しない場合は作成
+      if (!db.objectStoreNames.contains(SNS_USAGE_HISTORY_STORE_NAME)) {
+        const snsUsageStore = db.createObjectStore(SNS_USAGE_HISTORY_STORE_NAME, { keyPath: 'id' });
+        snsUsageStore.createIndex('timestamp', 'timestamp', { unique: false });
+        snsUsageStore.createIndex('snsId', 'snsId', { unique: false });
       }
 
       // v6へのアップグレード: Base64からBlobへ移行
@@ -492,4 +509,61 @@ export async function saveAppSettings(settings: AppSettings): Promise<void> {
 // 採点履歴IDを生成
 export function generateGradingHistoryId(): string {
   return `grading_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+}
+
+// SNS利用履歴を保存
+export async function saveSNSUsageHistory(record: Omit<SNSUsageHistoryRecord, 'id'>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    openDB().then((db) => {
+      const transaction = db.transaction([SNS_USAGE_HISTORY_STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(SNS_USAGE_HISTORY_STORE_NAME);
+
+      const historyRecord: SNSUsageHistoryRecord = {
+        id: `sns_usage_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        ...record
+      };
+
+      const request = objectStore.add(historyRecord);
+
+      transaction.oncomplete = () => {
+        console.log('✅ SNS利用履歴を保存:', historyRecord);
+        resolve();
+      };
+
+      request.onerror = () => {
+        console.error('❌ SNS利用履歴の保存に失敗:', request.error);
+        reject(new Error('SNS利用履歴の保存に失敗しました'));
+      };
+    }).catch(reject);
+  });
+}
+
+// SNS利用履歴を取得（新しい順）
+export async function getSNSUsageHistory(): Promise<SNSUsageHistoryRecord[]> {
+  return new Promise((resolve, reject) => {
+    openDB().then((db) => {
+      const transaction = db.transaction([SNS_USAGE_HISTORY_STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(SNS_USAGE_HISTORY_STORE_NAME);
+      const index = objectStore.index('timestamp');
+      const request = index.openCursor(null, 'prev'); // 新しい順
+
+      const results: SNSUsageHistoryRecord[] = [];
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          console.log('✅ SNS利用履歴を取得:', results.length);
+          resolve(results);
+        }
+      };
+
+      request.onerror = () => {
+        console.error('❌ SNS利用履歴の取得に失敗:', request.error);
+        reject(new Error('SNS利用履歴の取得に失敗しました'));
+      };
+    }).catch(reject);
+  });
 }

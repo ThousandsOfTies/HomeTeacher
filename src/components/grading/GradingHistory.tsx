@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { GradingHistoryRecord, getAllGradingHistory, deleteGradingHistory } from '../../utils/indexedDB'
+import { GradingHistoryRecord, getAllGradingHistory, deleteGradingHistory, SNSUsageHistoryRecord, getSNSUsageHistory } from '../../utils/indexedDB'
 import './GradingHistory.css'
 
 interface GradingHistoryProps {
@@ -8,7 +8,9 @@ interface GradingHistoryProps {
 }
 
 const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
+  const [activeTab, setActiveTab] = useState<'grading' | 'sns'>('grading')
   const [historyList, setHistoryList] = useState<GradingHistoryRecord[]>([])
+  const [snsHistoryList, setSnsHistoryList] = useState<SNSUsageHistoryRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedHistory, setSelectedHistory] = useState<GradingHistoryRecord | null>(null)
   const [filterCorrect, setFilterCorrect] = useState<'all' | 'correct' | 'incorrect'>('all')
@@ -24,6 +26,8 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
     try {
       const records = await getAllGradingHistory()
       setHistoryList(records)
+      const snsRecords = await getSNSUsageHistory()
+      setSnsHistoryList(snsRecords)
     } catch (error) {
       console.error('履歴の読み込みに失敗:', error)
     } finally {
@@ -95,6 +99,24 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
           </button>
         </div>
 
+        {/* タブ */}
+        <div className="history-tabs">
+          <button
+            className={`tab-button ${activeTab === 'grading' ? 'active' : ''}`}
+            onClick={() => setActiveTab('grading')}
+          >
+            採点履歴
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'sns' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sns')}
+          >
+            SNS利用履歴
+          </button>
+        </div>
+
+        {activeTab === 'grading' && (
+          <>
         {/* 統計情報 */}
         <div className="history-stats">
           <div className="stat-item">
@@ -254,6 +276,43 @@ const GradingHistory = ({ onClose, onSelectHistory }: GradingHistoryProps) => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+          </>
+        )}
+
+        {activeTab === 'sns' && (
+          <div className="sns-history-content">
+            {loading ? (
+              <div className="loading">読み込み中...</div>
+            ) : snsHistoryList.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📱</div>
+                <p>SNS利用履歴がありません</p>
+              </div>
+            ) : (
+              <div className="sns-history-list">
+                {snsHistoryList.map((record) => (
+                  <div key={record.id} className="sns-history-item">
+                    <div className="sns-history-main">
+                      <div className="sns-name">{record.snsName}</div>
+                      <div className="sns-timestamp">{formatDate(record.timestamp)}</div>
+                    </div>
+                    <div className="sns-history-details">
+                      <div className="sns-detail-item">
+                        <span className="sns-detail-label">制限時間:</span>
+                        <span className="sns-detail-value">{record.timeLimitMinutes}分</span>
+                      </div>
+                      <div className="sns-detail-item">
+                        <span className="sns-detail-label">URL:</span>
+                        <span className="sns-detail-value sns-url">{record.snsUrl}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

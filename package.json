@@ -17,9 +17,7 @@
     "preview": "vite preview",
     "preview:kids": "vite preview --mode kids",
     "preview:discuss": "vite preview --mode discuss",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
