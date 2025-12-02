@@ -228,7 +228,7 @@
 
 /* モデル情報フッター */
 .model-info-footer {
-  padding: 1rem 1.5rem;
+  padding: 0.6rem 1.5rem;
   background: #f8f9fa;
   border-top: 1px solid #dee2e6;
   border-radius: 0 0 12px 12px;
@@ -238,29 +238,11 @@
   gap: 1rem;
 }
 
-.model-info-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.model-info-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.model-info-label {
+.model-info-text {
   color: #666;
-  font-weight: 600;
-}
-
-.model-info-value {
-  color: #333;
+  font-size: 0.85rem;
   font-family: 'Courier New', monospace;
-  font-weight: 500;
+  flex: 1;
 }
 
 .footer-close-btn {

@@ -145,20 +145,6 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30, 
           }}
         >
           <h2>採点結果</h2>
-          <button
-            className="close-btn"
-            onClick={onClose}
-            onMouseDown={(e) => {
-              // ×ボタンのクリックイベントが正常に動作するように
-              e.stopPropagation()
-            }}
-            onTouchStart={(e) => {
-              // ×ボタンのタッチイベントが正常に動作するように
-              e.stopPropagation()
-            }}
-          >
-            ✕
-          </button>
         </div>
 
         <div
@@ -272,19 +258,10 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30, 
 
         {(modelName || responseTime !== null) && (
           <div className="model-info-footer">
-            <div className="model-info-container">
-              {modelName && (
-                <div className="model-info-item">
-                  <span className="model-info-label">使用モデル:</span>
-                  <span className="model-info-value">{modelName}</span>
-                </div>
-              )}
-              {responseTime !== null && responseTime !== undefined && (
-                <div className="model-info-item">
-                  <span className="model-info-label">レスポンス時間:</span>
-                  <span className="model-info-value">{responseTime}秒</span>
-                </div>
-              )}
+            <div className="model-info-text">
+              {modelName && responseTime !== null && responseTime !== undefined
+                ? `${modelName} (${responseTime}s)`
+                : modelName || `${responseTime}s`}
             </div>
             <button className="footer-close-btn" onClick={onClose}>
               閉じる
