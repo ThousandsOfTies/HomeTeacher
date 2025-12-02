@@ -11,7 +11,7 @@ const getApiBaseUrl = () => {
   
   if (isProduction) {
     // Cloud RunのURL
-    return 'https://hometeacher-api-736494768812.asia-northeast1.run.app/api'
+    return 'https://tuto-tuto-api-736494768812.asia-northeast1.run.app/api'
   }
   
   // ローカル開発環境
