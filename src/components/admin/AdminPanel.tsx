@@ -53,6 +53,8 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [snsTimeLimit, setSnsTimeLimit] = useState<number>(30); // デフォルト30分
   const [snsTimeLimitInput, setSnsTimeLimitInput] = useState<string>('30'); // 入力フィールド用
+  const [notificationEnabled, setNotificationEnabled] = useState<boolean>(false); // 通知の有効/無効
+  const [tempNotificationEnabled, setTempNotificationEnabled] = useState<boolean>(false); // 一時的な通知設定（編集中）
 
   // Load data on mount
   useEffect(() => {
@@ -72,11 +74,15 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
       const settings = await getAppSettings();
       setSnsTimeLimit(settings.snsTimeLimitMinutes);
       setSnsTimeLimitInput(String(settings.snsTimeLimitMinutes));
+      setNotificationEnabled(settings.notificationEnabled);
+      setTempNotificationEnabled(settings.notificationEnabled);
     } catch (error) {
       console.error('Failed to load settings:', error);
       // エラーの場合はデフォルト値を使用
       setSnsTimeLimit(30);
       setSnsTimeLimitInput('30');
+      setNotificationEnabled(false);
+      setTempNotificationEnabled(false);
       // データベースを再作成する必要がある場合
       if (error instanceof Error && error.message.includes('object stores was not found')) {
         console.log('⚠️ データベースの再作成が必要です。ブラウザをリロードしてください。');
@@ -124,6 +130,44 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
       console.error('Failed to save SNS settings:', error);
       setErrorMessage('Failed to save SNS settings');
     }
+  };
+
+  // 通知設定を開く（tempに現在の値をコピー）
+  const openNotificationSettings = () => {
+    setTempNotificationEnabled(notificationEnabled);
+    setShowNotificationSettings(true);
+  };
+
+  // 通知設定を保存
+  const saveNotificationSettings = async () => {
+    try {
+      // 通知を有効にする場合は許可をリクエスト
+      if (tempNotificationEnabled && notificationPermission !== 'granted') {
+        await requestNotificationPermission();
+        // 許可されなかった場合は保存せずに終了
+        if (Notification.permission !== 'granted') {
+          return;
+        }
+      }
+
+      // 設定を保存
+      await saveAppSettings({
+        id: 'app-settings',
+        snsTimeLimitMinutes: snsTimeLimit,
+        notificationEnabled: tempNotificationEnabled
+      });
+      setNotificationEnabled(tempNotificationEnabled);
+      setShowNotificationSettings(false);
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+      setErrorMessage('通知設定の保存に失敗しました');
+    }
+  };
+
+  // 通知設定をキャンセル
+  const cancelNotificationSettings = () => {
+    setTempNotificationEnabled(notificationEnabled);
+    setShowNotificationSettings(false);
   };
 
   // 通知許可をリクエスト
@@ -653,104 +697,173 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
           <div style={{
             backgroundColor: 'white',
             borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '400px',
-            width: '90%'
+            maxWidth: '500px',
+            maxHeight: '80vh',
+            width: '90%',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#2c3e50', fontSize: '20px' }}>
-              🔔 Notification (for 👨‍👩‍👧‍👦)
-            </h3>
+            {/* ヘッダー（固定） */}
+            <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid #ecf0f1' }}>
+              <h3 style={{ margin: '0 0 8px 0', color: '#2c3e50', fontSize: '20px' }}>
+                🔔 Notification (for 👨‍👩‍👧‍👦)
+              </h3>
+              <p style={{ margin: 0, color: '#7f8c8d', fontSize: '14px' }}>
+                ⚠️ iOS/iPadOSの場合、ホーム画面に追加したアプリでのみ通知が動作します
+              </p>
+            </div>
 
-            <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#7f8c8d' }}>
-              ⚠️ iOS/iPadOSの場合、ホーム画面に追加したアプリでのみ通知が動作します
-            </p>
-
-            {notificationPermission === 'granted' && (
+            {/* コンテンツ（スクロール可能） */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '16px 24px'
+            }}>
+              {/* トグルスイッチ */}
               <div style={{
                 padding: '16px',
-                backgroundColor: '#d4edda',
+                border: '2px solid #3498db',
                 borderRadius: '8px',
-                border: '1px solid #c3e6cb',
-                marginBottom: '12px'
+                backgroundColor: tempNotificationEnabled ? '#f0f8ff' : 'white',
+                transition: 'all 0.2s ease'
               }}>
-                <div style={{ color: '#155724', fontWeight: '600', marginBottom: '4px' }}>
-                  ✅ 通知が有効です
-                </div>
-                <div style={{ color: '#155724', fontSize: '12px' }}>
-                  時間切れの際に通知が送信されます
-                </div>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: '#2c3e50',
+                      marginBottom: '4px'
+                    }}>
+                      通知を有効にする
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: '#7f8c8d'
+                    }}>
+                      時間切れの際に通知を送信します
+                    </div>
+                  </div>
+                  {/* トグルスイッチ */}
+                  <div
+                    onClick={() => setTempNotificationEnabled(!tempNotificationEnabled)}
+                    style={{
+                      width: '50px',
+                      height: '28px',
+                      backgroundColor: tempNotificationEnabled ? '#27ae60' : '#bdc3c7',
+                      borderRadius: '14px',
+                      position: 'relative',
+                      transition: 'background-color 0.2s ease',
+                      cursor: 'pointer',
+                      marginLeft: '12px'
+                    }}
+                  >
+                    <div style={{
+                      width: '22px',
+                      height: '22px',
+                      backgroundColor: 'white',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '3px',
+                      left: tempNotificationEnabled ? '25px' : '3px',
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </div>
+                </label>
               </div>
-            )}
 
-            {notificationPermission === 'default' && (
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#fff3cd',
-                borderRadius: '8px',
-                border: '1px solid #ffeeba',
-                marginBottom: '12px'
-              }}>
-                <div style={{ color: '#856404', fontWeight: '600', marginBottom: '8px' }}>
-                  ⚠️ 通知が未設定です
+              {/* 通知許可状態の表示 */}
+              {notificationPermission === 'granted' && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: '#d4edda',
+                  borderRadius: '8px',
+                  border: '1px solid #c3e6cb'
+                }}>
+                  <div style={{ color: '#155724', fontSize: '13px' }}>
+                    ✅ ブラウザの通知許可: 有効
+                  </div>
                 </div>
-                <div style={{ color: '#856404', fontSize: '13px', marginBottom: '12px' }}>
-                  時間切れ通知を受け取るには許可が必要です
-                </div>
-                <button
-                  onClick={requestNotificationPermission}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#3498db',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  通知を許可する
-                </button>
-              </div>
-            )}
+              )}
 
-            {notificationPermission === 'denied' && (
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#f8d7da',
-                borderRadius: '8px',
-                border: '1px solid #f5c6cb',
-                marginBottom: '12px'
-              }}>
-                <div style={{ color: '#721c24', fontWeight: '600', marginBottom: '8px' }}>
-                  ❌ 通知が拒否されています
+              {notificationPermission === 'default' && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: '#fff3cd',
+                  borderRadius: '8px',
+                  border: '1px solid #ffeeba'
+                }}>
+                  <div style={{ color: '#856404', fontSize: '13px' }}>
+                    ⚠️ 通知を有効にする際、ブラウザの許可が必要です
+                  </div>
                 </div>
-                <div style={{ color: '#721c24', fontSize: '13px' }}>
-                  iPadの設定 → Safari → TutoTuto から通知を許可してください
-                </div>
-              </div>
-            )}
+              )}
 
-            <button
-              onClick={() => setShowNotificationSettings(false)}
-              style={{
-                width: '100%',
-                padding: '10px 20px',
-                backgroundColor: '#3498db',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2980b9'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3498db'}
-            >
-              閉じる
-            </button>
+              {notificationPermission === 'denied' && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: '#f8d7da',
+                  borderRadius: '8px',
+                  border: '1px solid #f5c6cb'
+                }}>
+                  <div style={{ color: '#721c24', fontWeight: '600', marginBottom: '4px', fontSize: '13px' }}>
+                    ❌ ブラウザの通知許可: 拒否されています
+                  </div>
+                  <div style={{ color: '#721c24', fontSize: '12px' }}>
+                    iPadの設定 → Safari → TutoTuto から通知を許可してください
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* フッター（固定） */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #ecf0f1',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={cancelNotificationSettings}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveNotificationSettings}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1095,7 +1208,7 @@ export default function AdminPanel({ onSelectPDF }: AdminPanelProps) {
 
               {/* 通知設定セクション */}
               <button
-                onClick={() => setShowNotificationSettings(true)}
+                onClick={openNotificationSettings}
                 style={{
                   width: '100%',
                   backgroundColor: 'white',
