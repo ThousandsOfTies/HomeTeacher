@@ -189,6 +189,7 @@ OUTPUT: Valid JSON only - no markdown formatting, no code blocks.`
     let result
     let lastError
     let usedModelName = preferredModelName
+    let elapsedTime = 0
     const startTime = Date.now()
 
     // 優先モデルで試行
@@ -219,7 +220,7 @@ OUTPUT: Valid JSON only - no markdown formatting, no code blocks.`
         }
       })
 
-      const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      elapsedTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2))
       console.log(`✅ APIレスポンス (${preferredModelName}): ${elapsedTime}秒`)
     } catch (error: any) {
       lastError = error
@@ -255,7 +256,7 @@ OUTPUT: Valid JSON only - no markdown formatting, no code blocks.`
           })
 
           usedModelName = fallbackModelName
-          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2)
+          elapsedTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2))
           console.log(`✅ APIレスポンス (${fallbackModelName}): ${elapsedTime}秒`)
         } catch (fallbackError: any) {
           console.error(`❌ ${fallbackModelName} でも失敗:`, fallbackError.message)
@@ -352,6 +353,8 @@ OUTPUT: Valid JSON only - no markdown formatting, no code blocks.`
     res.json({
       success: true,
       result: gradingResult,
+      modelName: usedModelName,
+      responseTime: elapsedTime,
     })
   } catch (error) {
     console.error('採点エラー:', error)

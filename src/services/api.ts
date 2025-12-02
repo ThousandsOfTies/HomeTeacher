@@ -39,6 +39,8 @@ export interface GradingResult {
 export interface GradeResponse {
   success: boolean
   result: GradingResult
+  modelName?: string
+  responseTime?: number
   error?: string
 }
 

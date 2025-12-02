@@ -226,6 +226,35 @@
   background: #1976D2;
 }
 
+/* モデル情報フッター */
+.model-info-footer {
+  padding: 1rem 1.5rem;
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.model-info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.model-info-label {
+  color: #666;
+  font-weight: 600;
+}
+
+.model-info-value {
+  color: #333;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
 /* SNSリンクセクション */
 .sns-links-section {
   margin-top: 1.5rem;
