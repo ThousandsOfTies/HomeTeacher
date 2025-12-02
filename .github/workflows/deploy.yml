@@ -35,7 +35,6 @@ jobs:
         run: npm run build:kids
         env:
           NODE_ENV: production
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Move Kids build to deploy directory
         run: |
@@ -47,7 +46,6 @@ jobs:
         run: npm run build:discuss
         env:
           NODE_ENV: production
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Move Discuss build to deploy/discuss
         run: |
