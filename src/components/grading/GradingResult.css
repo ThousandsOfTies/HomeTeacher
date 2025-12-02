@@ -233,8 +233,16 @@
   border-top: 1px solid #dee2e6;
   border-radius: 0 0 12px 12px;
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.model-info-container {
+  display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
 }
 
 .model-info-item {
@@ -253,6 +261,23 @@
   color: #333;
   font-family: 'Courier New', monospace;
   font-weight: 500;
+}
+
+.footer-close-btn {
+  padding: 0.6rem 1.5rem;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.footer-close-btn:hover {
+  background: #1976D2;
 }
 
 /* SNSリンクセクション */

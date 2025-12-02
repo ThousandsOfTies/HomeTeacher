@@ -272,18 +272,23 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30, 
 
         {(modelName || responseTime !== null) && (
           <div className="model-info-footer">
-            {modelName && (
-              <div className="model-info-item">
-                <span className="model-info-label">使用モデル:</span>
-                <span className="model-info-value">{modelName}</span>
-              </div>
-            )}
-            {responseTime !== null && responseTime !== undefined && (
-              <div className="model-info-item">
-                <span className="model-info-label">レスポンス時間:</span>
-                <span className="model-info-value">{responseTime}秒</span>
-              </div>
-            )}
+            <div className="model-info-container">
+              {modelName && (
+                <div className="model-info-item">
+                  <span className="model-info-label">使用モデル:</span>
+                  <span className="model-info-value">{modelName}</span>
+                </div>
+              )}
+              {responseTime !== null && responseTime !== undefined && (
+                <div className="model-info-item">
+                  <span className="model-info-label">レスポンス時間:</span>
+                  <span className="model-info-value">{responseTime}秒</span>
+                </div>
+              )}
+            </div>
+            <button className="footer-close-btn" onClick={onClose}>
+              閉じる
+            </button>
           </div>
         )}
       </div>
