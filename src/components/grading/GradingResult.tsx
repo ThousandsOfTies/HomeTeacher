@@ -99,15 +99,15 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30, 
       }
     }))
 
-    // 警告ページへ遷移（SNS選択UIを表示）
+    // SNS管理ページへ遷移（SNS選択UIを表示）
     // 戻り先URLを明示的に渡す（PWA/IndexedDB安定性のため）
     const returnUrl = `${window.location.origin}${import.meta.env.BASE_URL || '/'}`
-    const warningUrl = `${returnUrl}warning.html?time=${timeLimitMinutes}&snsLinks=${encodeURIComponent(snsLinksJson)}&returnUrl=${encodeURIComponent(returnUrl)}`
+    const manageUrl = `${returnUrl}manage.html?time=${timeLimitMinutes}&snsLinks=${encodeURIComponent(snsLinksJson)}&returnUrl=${encodeURIComponent(returnUrl)}`
 
-    console.log('🔄 SNS警告ページへ遷移:', { warningUrl, returnUrl })
+    console.log('🔄 SNS管理ページへ遷移:', { manageUrl, returnUrl })
 
-    // 現在のタブを警告ページに置き換え
-    window.location.replace(warningUrl)
+    // 現在のタブをSNS管理ページに置き換え
+    window.location.replace(manageUrl)
   }
 
   return (

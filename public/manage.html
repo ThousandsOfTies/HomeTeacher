@@ -474,7 +474,7 @@
           } else {
             // フォールバック: 従来の方法
             const pathParts = window.location.pathname.split('/');
-            pathParts.pop(); // warning.htmlを削除
+            pathParts.pop(); // manage.htmlを削除
             baseUrl = window.location.origin + pathParts.join('/') + '/';
             console.log('⚠️ returnUrlパラメータなし、従来の方法を使用:', baseUrl);
           }
