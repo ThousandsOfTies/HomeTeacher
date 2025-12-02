@@ -105,6 +105,12 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const RENDER_SCALE = 5.0
   const [renderScale, setRenderScale] = useState(RENDER_SCALE)
 
+  // フィット時のズーム値を保持（これより小さくしようとしたらフィット表示に戻す）
+  const [minFitZoom, setMinFitZoom] = useState(1.0 / RENDER_SCALE)
+
+  // 画面フィット＆中央配置の共通関数（先に定義が必要）
+  const applyFitAndCenterRef = React.useRef<() => void>()
+
   // useZoomPan hook を使用してズーム・パン機能を管理
   const {
     zoom,
@@ -118,7 +124,12 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     stopPanning,
     resetZoom: hookResetZoom,
     lastWheelCursor
-  } = useZoomPan(wrapperRef, RENDER_SCALE)
+  } = useZoomPan(wrapperRef, RENDER_SCALE, minFitZoom, () => {
+    // フィットサイズより小さくしようとしたら、フィット表示に戻す
+    if (applyFitAndCenterRef.current) {
+      applyFitAndCenterRef.current()
+    }
+  })
 
   const displayZoom = Math.round(renderScale * zoom * 100)
 
@@ -472,6 +483,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     // zoom範囲 1/RENDER_SCALE ～ 1.0 に制限
     const clampedZoom = Math.max(1.0 / RENDER_SCALE, Math.min(1.0, fitZoom))
 
+    // フィット時のズーム値を保存（これより小さくしようとしたらフィット表示に戻す）
+    setMinFitZoom(clampedZoom)
+
     setZoom(clampedZoom)
 
     // 中央配置を計算（wrapperを基準に）
@@ -485,6 +499,9 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
     setPanOffset({ x: centerX, y: centerY })
   }
+
+  // applyFitAndCenter 関数を ref に保存（useZoomPan から呼び出せるように）
+  applyFitAndCenterRef.current = applyFitAndCenter
   // 描画機能（パスとして保存）
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // Ctrl押下中は描画しない
@@ -715,7 +732,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   /**
    * ピンチズーム用の状態管理（正しい実装）
-   * 
+   *
    * touchstart時の初期値を保存し、touchmoveでは初期値から毎回計算
    * これにより累積誤差が発生しない
    */
@@ -725,9 +742,16 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const pinchCenterRef = useRef<{ x: number; y: number } | null>(null)
 
   /**
-   * 2本指タッチ開始ハンドラ（ピンチズーム）
+   * スワイプによるページ送り用の状態管理
+   */
+  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
+  const isSwipingRef = useRef<boolean>(false)
+
+  /**
+   * タッチ開始ハンドラ（ピンチズーム & スワイプページ送り）
    */
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // 2本指のピンチズーム
     if (e.touches.length === 2) {
       e.preventDefault()
       const t1 = e.touches[0]
@@ -751,6 +775,31 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           y: (t1.clientY + t2.clientY) / 2 - rect.top
         }
       }
+
+      // スワイプをキャンセル
+      swipeStartRef.current = null
+      isSwipingRef.current = false
+    }
+    // 1本指のスワイプ検出（描画モード・消しゴムモード・選択モードでない場合のみ）
+    else if (e.touches.length === 1 && !isDrawingMode && !isEraserMode && !isSelectionMode) {
+      const touch = e.touches[0]
+
+      // Apple Pencil かどうかを判定（描画用のタッチは除外）
+      // @ts-ignore
+      const touchType = touch.touchType || 'direct'
+
+      // Apple Pencil (stylus) の場合はスワイプ検出しない
+      if (touchType === 'stylus') {
+        return
+      }
+
+      // スワイプ開始位置を記録
+      swipeStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      }
+      isSwipingRef.current = true
     }
   }
 
@@ -776,8 +825,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
     // スケール比率
     const ratio = currentDistance / initialPinchDistanceRef.current
-    // プリレンダリング: zoom範囲 1/RENDER_SCALE ～ 1.0
-    const newZoom = Math.max(1.0 / RENDER_SCALE, Math.min(1.0, initialScaleRef.current * ratio))
+    // プリレンダリング: zoom範囲 minFitZoom ～ 1.0
+    let newZoom = Math.min(1.0, initialScaleRef.current * ratio)
+
+    // フィットサイズより小さくしようとしたら、フィット表示に戻す
+    if (newZoom < minFitZoom) {
+      applyFitAndCenter()
+      return
+    }
 
     // 現在の指の中心位置（wrapper基準）
     if (!wrapperRef.current) return
@@ -800,12 +855,61 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }
 
   /**
-   * 2本指タッチ終了ハンドラ
+   * タッチ終了ハンドラ（ピンチズーム終了 & スワイプページ送り判定）
    */
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    // ピンチズーム終了
     if (e.touches.length < 2) {
       initialPinchDistanceRef.current = null
       pinchCenterRef.current = null
+    }
+
+    // スワイプ判定（すべての指が離れた場合のみ）
+    if (e.touches.length === 0 && isSwipingRef.current && swipeStartRef.current) {
+      const touch = e.changedTouches[0]
+      const endX = touch.clientX
+      const endY = touch.clientY
+      const startX = swipeStartRef.current.x
+      const startY = swipeStartRef.current.y
+
+      const deltaX = endX - startX
+      const deltaY = endY - startY
+      const duration = Date.now() - swipeStartRef.current.time
+
+      // 縦方向の移動距離が十分で、横方向の移動が少ない場合にページ送り
+      const MIN_SWIPE_DISTANCE = 80 // 最小スワイプ距離（px）
+      const MAX_HORIZONTAL_DRIFT = 60 // 横方向の最大許容誤差（px）
+      const MAX_DURATION = 500 // 最大スワイプ時間（ms）
+
+      const isVerticalSwipe = Math.abs(deltaY) > MIN_SWIPE_DISTANCE && Math.abs(deltaX) < MAX_HORIZONTAL_DRIFT && duration < MAX_DURATION
+
+      if (isVerticalSwipe) {
+        if (deltaY < 0) {
+          // スワイプアップ（上方向）→ 次のページ
+          if (pageNum < numPages) {
+            console.log('👆 スワイプアップ検出 - 次のページへ')
+            handleGoToNextPage()
+            // 振動フィードバック（対応デバイスのみ）
+            if (navigator.vibrate) {
+              navigator.vibrate(30)
+            }
+          }
+        } else {
+          // スワイプダウン（下方向）→ 前のページ
+          if (pageNum > 1) {
+            console.log('👇 スワイプダウン検出 - 前のページへ')
+            handleGoToPrevPage()
+            // 振動フィードバック（対応デバイスのみ）
+            if (navigator.vibrate) {
+              navigator.vibrate(30)
+            }
+          }
+        }
+      }
+
+      // スワイプ状態をリセット
+      swipeStartRef.current = null
+      isSwipingRef.current = false
     }
   }
 
@@ -1351,6 +1455,43 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
+  // 10ページ単位の移動（ボタン用）
+  const handleGoToPrev10Pages = () => {
+    const newPage = Math.max(1, pageNum - 10)
+    if (newPage !== pageNum) {
+      // ページ移動時に現在のページの履歴をクリア
+      setHistory(prev => {
+        const newHistory = new Map(prev)
+        newHistory.delete(pageNum)
+        return newHistory
+      })
+      setHistoryIndex(prev => {
+        const newIndex = new Map(prev)
+        newIndex.delete(pageNum)
+        return newIndex
+      })
+      setPageNum(newPage)
+    }
+  }
+
+  const handleGoToNext10Pages = () => {
+    const newPage = Math.min(numPages, pageNum + 10)
+    if (newPage !== pageNum) {
+      // ページ移動時に現在のページの履歴をクリア
+      setHistory(prev => {
+        const newHistory = new Map(prev)
+        newHistory.delete(pageNum)
+        return newHistory
+      })
+      setHistoryIndex(prev => {
+        const newIndex = new Map(prev)
+        newIndex.delete(pageNum)
+        return newIndex
+      })
+      setPageNum(newPage)
+    }
+  }
+
   return (
     <div className="pdf-viewer-container">
       <div className="pdf-viewer">
@@ -1636,14 +1777,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           {/* ページナビゲーション（右端） */}
           {numPages > 1 && (
             <div className="page-scrollbar-container">
-              {/* 前のページボタン */}
+              {/* 前の10ページボタン */}
               <button
                 className="page-nav-button"
-                onClick={handleGoToPrevPage}
+                onClick={handleGoToPrev10Pages}
                 disabled={pageNum <= 1}
-                title="前のページ"
+                title="前の10ページ"
               >
-                ▲
+                ▲▲
               </button>
 
               {/* ページスライダー（縦向き） */}
@@ -1662,14 +1803,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                 />
               </div>
 
-              {/* 次のページボタン */}
+              {/* 次の10ページボタン */}
               <button
                 className="page-nav-button"
-                onClick={handleGoToNextPage}
+                onClick={handleGoToNext10Pages}
                 disabled={pageNum >= numPages}
-                title="次のページ"
+                title="次の10ページ"
               >
-                ▼
+                ▼▼
               </button>
 
               {/* ページインジケーター */}

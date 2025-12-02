@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 
 export const useZoomPan = (
   containerRef: React.RefObject<HTMLDivElement>,
-  renderScale: number = 5.0
+  renderScale: number = 5.0,
+  minFitZoom: number = 1.0 / 5.0,
+  onResetToFit?: () => void
 ) => {
   // プリレンダリング戦略: 初期zoom = 1/RENDER_SCALE（等倍表示）
   const [zoom, setZoom] = useState(1.0 / renderScale)
@@ -56,8 +58,18 @@ export const useZoomPan = (
 
         const delta = e.deltaY > 0 ? -0.1 : 0.1
         const oldZoom = zoom
-        // プリレンダリング: zoom範囲 1/RENDER_SCALE ～ 1.0
-        const newZoom = Math.max(1.0 / renderScale, Math.min(1.0, oldZoom + delta))
+        // プリレンダリング: zoom範囲 minFitZoom ～ 1.0
+        let newZoom = Math.min(1.0, oldZoom + delta)
+
+        // フィットサイズより小さくしようとしたら、フィット表示に戻す
+        if (newZoom < minFitZoom) {
+          if (onResetToFit) {
+            onResetToFit()
+            return
+          } else {
+            newZoom = minFitZoom
+          }
+        }
 
         // マウスカーソルを中心にズームするため、パンオフセットを調整
         const containerRect = containerRef.current.getBoundingClientRect()
@@ -92,7 +104,7 @@ export const useZoomPan = (
     return () => {
       document.removeEventListener('wheel', handleWheel)
     }
-  }, [containerRef, zoom, panOffset])
+  }, [containerRef, zoom, panOffset, minFitZoom, onResetToFit])
 
   // Ctrlキーの状態を追跡
   useEffect(() => {
