@@ -1455,6 +1455,43 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     }
   }
 
+  // 10ページ単位の移動（ボタン用）
+  const handleGoToPrev10Pages = () => {
+    const newPage = Math.max(1, pageNum - 10)
+    if (newPage !== pageNum) {
+      // ページ移動時に現在のページの履歴をクリア
+      setHistory(prev => {
+        const newHistory = new Map(prev)
+        newHistory.delete(pageNum)
+        return newHistory
+      })
+      setHistoryIndex(prev => {
+        const newIndex = new Map(prev)
+        newIndex.delete(pageNum)
+        return newIndex
+      })
+      setPageNum(newPage)
+    }
+  }
+
+  const handleGoToNext10Pages = () => {
+    const newPage = Math.min(numPages, pageNum + 10)
+    if (newPage !== pageNum) {
+      // ページ移動時に現在のページの履歴をクリア
+      setHistory(prev => {
+        const newHistory = new Map(prev)
+        newHistory.delete(pageNum)
+        return newHistory
+      })
+      setHistoryIndex(prev => {
+        const newIndex = new Map(prev)
+        newIndex.delete(pageNum)
+        return newIndex
+      })
+      setPageNum(newPage)
+    }
+  }
+
   return (
     <div className="pdf-viewer-container">
       <div className="pdf-viewer">
@@ -1740,14 +1777,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           {/* ページナビゲーション（右端） */}
           {numPages > 1 && (
             <div className="page-scrollbar-container">
-              {/* 前のページボタン */}
+              {/* 前の10ページボタン */}
               <button
                 className="page-nav-button"
-                onClick={handleGoToPrevPage}
+                onClick={handleGoToPrev10Pages}
                 disabled={pageNum <= 1}
-                title="前のページ"
+                title="前の10ページ"
               >
-                ▲
+                ▲▲
               </button>
 
               {/* ページスライダー（縦向き） */}
@@ -1766,14 +1803,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                 />
               </div>
 
-              {/* 次のページボタン */}
+              {/* 次の10ページボタン */}
               <button
                 className="page-nav-button"
-                onClick={handleGoToNextPage}
+                onClick={handleGoToNext10Pages}
                 disabled={pageNum >= numPages}
-                title="次のページ"
+                title="次の10ページ"
               >
-                ▼
+                ▼▼
               </button>
 
               {/* ページインジケーター */}
