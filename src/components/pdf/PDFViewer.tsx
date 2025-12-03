@@ -1784,7 +1784,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                 disabled={pageNum <= 1}
                 title="前の10ページ"
               >
-                ▲▲
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.6' }}>
+                  <span>▲</span>
+                  <span>▲</span>
+                </div>
               </button>
 
               {/* ページスライダー（縦向き） */}
@@ -1810,7 +1813,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                 disabled={pageNum >= numPages}
                 title="次の10ページ"
               >
-                ▼▼
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.6' }}>
+                  <span>▼</span>
+                  <span>▼</span>
+                </div>
               </button>
 
               {/* ページインジケーター */}
