@@ -12,7 +12,11 @@ import { useSelection, SelectionRect } from '../../hooks/pdf/useSelection'
 import './PDFViewer.css'
 
 // PDF.jsのworkerを設定（ローカルファイルを使用、Safari/Edge対応）
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/HomeTeacher/pdf.worker.min.js'
+// 開発環境と本番環境でパスを切り替え
+const isProduction = window.location.hostname === 'thousandsofties.github.io'
+pdfjsLib.GlobalWorkerOptions.workerSrc = isProduction
+  ? '/HomeTeacher/pdf.worker.min.js'
+  : '/pdf.worker.min.js'
 
 // 画像圧縮ヘルパー関数
 const compressImage = (canvas: HTMLCanvasElement, maxSize: number = 1024): string => {
@@ -742,12 +746,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const pinchCenterRef = useRef<{ x: number; y: number } | null>(null)
 
   /**
-   * スワイプによるページ送り用の状態管理
-   */
-  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
-  const isSwipingRef = useRef<boolean>(false)
-
-  /**
    * タッチ開始ハンドラ（ピンチズーム & スワイプページ送り）
    */
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -775,31 +773,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
           y: (t1.clientY + t2.clientY) / 2 - rect.top
         }
       }
-
-      // スワイプをキャンセル
-      swipeStartRef.current = null
-      isSwipingRef.current = false
-    }
-    // 1本指のスワイプ検出（描画モード・消しゴムモード・選択モードでない場合のみ）
-    else if (e.touches.length === 1 && !isDrawingMode && !isEraserMode && !isSelectionMode) {
-      const touch = e.touches[0]
-
-      // Apple Pencil かどうかを判定（描画用のタッチは除外）
-      // @ts-ignore
-      const touchType = touch.touchType || 'direct'
-
-      // Apple Pencil (stylus) の場合はスワイプ検出しない
-      if (touchType === 'stylus') {
-        return
-      }
-
-      // スワイプ開始位置を記録
-      swipeStartRef.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-        time: Date.now()
-      }
-      isSwipingRef.current = true
     }
   }
 
@@ -855,61 +828,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }
 
   /**
-   * タッチ終了ハンドラ（ピンチズーム終了 & スワイプページ送り判定）
+   * タッチ終了ハンドラ（ピンチズーム終了）
    */
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     // ピンチズーム終了
     if (e.touches.length < 2) {
       initialPinchDistanceRef.current = null
       pinchCenterRef.current = null
-    }
-
-    // スワイプ判定（すべての指が離れた場合のみ）
-    if (e.touches.length === 0 && isSwipingRef.current && swipeStartRef.current) {
-      const touch = e.changedTouches[0]
-      const endX = touch.clientX
-      const endY = touch.clientY
-      const startX = swipeStartRef.current.x
-      const startY = swipeStartRef.current.y
-
-      const deltaX = endX - startX
-      const deltaY = endY - startY
-      const duration = Date.now() - swipeStartRef.current.time
-
-      // 縦方向の移動距離が十分で、横方向の移動が少ない場合にページ送り
-      const MIN_SWIPE_DISTANCE = 80 // 最小スワイプ距離（px）
-      const MAX_HORIZONTAL_DRIFT = 60 // 横方向の最大許容誤差（px）
-      const MAX_DURATION = 500 // 最大スワイプ時間（ms）
-
-      const isVerticalSwipe = Math.abs(deltaY) > MIN_SWIPE_DISTANCE && Math.abs(deltaX) < MAX_HORIZONTAL_DRIFT && duration < MAX_DURATION
-
-      if (isVerticalSwipe) {
-        if (deltaY < 0) {
-          // スワイプアップ（上方向）→ 次のページ
-          if (pageNum < numPages) {
-            console.log('👆 スワイプアップ検出 - 次のページへ')
-            handleGoToNextPage()
-            // 振動フィードバック（対応デバイスのみ）
-            if (navigator.vibrate) {
-              navigator.vibrate(30)
-            }
-          }
-        } else {
-          // スワイプダウン（下方向）→ 前のページ
-          if (pageNum > 1) {
-            console.log('👇 スワイプダウン検出 - 前のページへ')
-            handleGoToPrevPage()
-            // 振動フィードバック（対応デバイスのみ）
-            if (navigator.vibrate) {
-              navigator.vibrate(30)
-            }
-          }
-        }
-      }
-
-      // スワイプ状態をリセット
-      swipeStartRef.current = null
-      isSwipingRef.current = false
     }
   }
 
@@ -1672,6 +1597,63 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               </details>
             </div>
           )}
+          {/* ページ送りボタン（フィット表示時のみ） */}
+          {zoom <= minFitZoom && (
+            <>
+              {/* 上端ボタン - 前のページ */}
+              {pageNum > 1 && (
+                <button
+                  onClick={handleGoToPrevPage}
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    zIndex: 10,
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
+                >
+                  PREV
+                </button>
+              )}
+
+              {/* 下端ボタン - 次のページ */}
+              {pageNum < numPages && (
+                <button
+                  onClick={handleGoToNextPage}
+                  style={{
+                    position: 'absolute',
+                    bottom: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    zIndex: 10,
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
+                >
+                  NEXT
+                </button>
+              )}
+            </>
+          )}
+
           <div className="canvas-wrapper" ref={wrapperRef}>
             <div
               className="canvas-layer"
@@ -1704,83 +1686,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                 onTouchEnd={handleDrawingTouchEnd}
               />
             </div>
-
-            {/* ページ送りタップ領域（フィット表示時のみ） */}
-            {zoom <= minFitZoom && !isDrawingMode && !isEraserMode && !isSelectionMode && (
-              <>
-                {/* 上端タップ領域 - 前のページ */}
-                {pageNum > 1 && (
-                  <div
-                    className="page-tap-area page-tap-top"
-                    onClick={handleGoToPrevPage}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '30%',
-                      cursor: 'pointer',
-                      zIndex: 10,
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                      paddingTop: '20px',
-                      opacity: 0,
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.3'}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                  >
-                    <div style={{
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      padding: '8px 16px',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      pointerEvents: 'none'
-                    }}>
-                      ▲ 前のページ
-                    </div>
-                  </div>
-                )}
-
-                {/* 下端タップ領域 - 次のページ */}
-                {pageNum < numPages && (
-                  <div
-                    className="page-tap-area page-tap-bottom"
-                    onClick={handleGoToNextPage}
-                    style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: '30%',
-                      cursor: 'pointer',
-                      zIndex: 10,
-                      display: 'flex',
-                      alignItems: 'flex-end',
-                      justifyContent: 'center',
-                      paddingBottom: '20px',
-                      opacity: 0,
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.3'}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                  >
-                    <div style={{
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      padding: '8px 16px',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      pointerEvents: 'none'
-                    }}>
-                      ▼ 次のページ
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
 
             {/* 矩形選択Canvas（transformの影響を受けないようにcanvas-layerの外に配置） */}
             <canvas
