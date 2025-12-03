@@ -109,7 +109,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const [minFitZoom, setMinFitZoom] = useState(1.0 / RENDER_SCALE)
 
   // 画面フィット＆中央配置の共通関数（先に定義が必要）
-  const applyFitAndCenterRef = React.useRef<() => void>()
+  const applyFitAndCenterRef = useRef<() => void>()
 
   // useZoomPan hook を使用してズーム・パン機能を管理
   const {
