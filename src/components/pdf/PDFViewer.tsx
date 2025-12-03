@@ -1705,6 +1705,83 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               />
             </div>
 
+            {/* ページ送りタップ領域（フィット表示時のみ） */}
+            {zoom <= minFitZoom && !isDrawingMode && !isEraserMode && !isSelectionMode && (
+              <>
+                {/* 上端タップ領域 - 前のページ */}
+                {pageNum > 1 && (
+                  <div
+                    className="page-tap-area page-tap-top"
+                    onClick={handleGoToPrevPage}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '30%',
+                      cursor: 'pointer',
+                      zIndex: 10,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      paddingTop: '20px',
+                      opacity: 0,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.3'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                  >
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      pointerEvents: 'none'
+                    }}>
+                      ▲ 前のページ
+                    </div>
+                  </div>
+                )}
+
+                {/* 下端タップ領域 - 次のページ */}
+                {pageNum < numPages && (
+                  <div
+                    className="page-tap-area page-tap-bottom"
+                    onClick={handleGoToNextPage}
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '30%',
+                      cursor: 'pointer',
+                      zIndex: 10,
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      paddingBottom: '20px',
+                      opacity: 0,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.3'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                  >
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      pointerEvents: 'none'
+                    }}>
+                      ▼ 次のページ
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
             {/* 矩形選択Canvas（transformの影響を受けないようにcanvas-layerの外に配置） */}
             <canvas
               ref={selectionCanvasRef}
