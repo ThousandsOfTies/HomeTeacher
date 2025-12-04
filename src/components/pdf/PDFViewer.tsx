@@ -486,7 +486,8 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   }, [isInitialDrawLoad, isInitialPositionSet, zoom])
 
   // 画面フィット＆中央配置の共通関数
-  const applyFitAndCenter = () => {
+  // forceSet: trueの場合は常にfitZoomに設定、falseの場合は最小値チェックのみ
+  const applyFitAndCenter = (forceSet: boolean = true) => {
     if (!canvasRef.current || !containerRef.current || !wrapperRef.current) return
 
     const container = containerRef.current
@@ -516,7 +517,12 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     // フィット時のズーム値を保存（これより小さくしようとしたらフィット表示に戻す）
     setMinFitZoom(clampedZoom)
 
-    setZoom(clampedZoom)
+    // forceSet=trueの場合は常にfitZoomに設定、falseの場合は最小値チェックのみ
+    if (forceSet) {
+      setZoom(clampedZoom)
+    } else {
+      setZoom(prevZoom => Math.max(clampedZoom, prevZoom))
+    }
 
     // 中央配置を計算（wrapperを基準に）
     const wrapperWidth = wrapper.clientWidth
@@ -727,6 +733,16 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     applyFitAndCenter()
   }
 
+  // ウィンドウリサイズ時にminFitZoomを更新（最小値チェックのみ）
+  useEffect(() => {
+    const handleResize = () => {
+      applyFitAndCenter(false)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [canvasRef.current?.width, canvasRef.current?.height])
+
   // Ctrl+Z でアンドゥ機能
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -825,13 +841,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     // スケール比率
     const ratio = currentDistance / initialPinchDistanceRef.current
     // プリレンダリング: zoom範囲 minFitZoom ～ 1.0
-    let newZoom = Math.min(1.0, initialScaleRef.current * ratio)
-
-    // フィットサイズより小さくしようとしたら、フィット表示に戻す
-    if (newZoom < minFitZoom) {
-      applyFitAndCenter()
-      return
-    }
+    let newZoom = Math.max(minFitZoom, Math.min(1.0, initialScaleRef.current * ratio))
 
     // 現在の指の中心位置（wrapper基準）
     if (!wrapperRef.current) return
@@ -849,10 +859,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     const panX = currentPinchCenterX - pinchCenterRef.current.x
     const panY = currentPinchCenterY - pinchCenterRef.current.y
 
-    // パン範囲制限を適用
-    const newOffset = { x: newOriginX + panX, y: newOriginY + panY }
-    const limitedOffset = applyPanLimit(newOffset, newZoom)
-    setPanOffset(limitedOffset)
+    setPanOffset({ x: newOriginX + panX, y: newOriginY + panY })
     setZoom(newZoom)
   }
 
@@ -1631,72 +1638,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               </details>
             </div>
           )}
-          {/* ページ送りボタン（フィット表示時のみ） */}
-          {zoom <= minFitZoom && (
-            <>
-              {/* 上端ボタン - 前のページ */}
-              {pageNum > 1 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleGoToPrevPage()
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  style={{
-                    position: 'absolute',
-                    top: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(0, 0, 0, 0.6)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    zIndex: 10,
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
-                >
-                  PREV
-                </button>
-              )}
-
-              {/* 下端ボタン - 次のページ */}
-              {pageNum < numPages && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleGoToNextPage()
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  style={{
-                    position: 'absolute',
-                    bottom: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(0, 0, 0, 0.6)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    zIndex: 10,
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'}
-                >
-                  NEXT
-                </button>
-              )}
-            </>
-          )}
 
           <div className="canvas-wrapper" ref={wrapperRef}>
             <div
@@ -1816,6 +1757,16 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                 </div>
               </button>
 
+              {/* 前の1ページボタン */}
+              <button
+                className="page-nav-button"
+                onClick={handleGoToPrevPage}
+                disabled={pageNum <= 1}
+                title="前のページ"
+              >
+                <span>▲</span>
+              </button>
+
               {/* ページスライダー（縦向き） */}
               <div className="page-slider-wrapper">
                 <input
@@ -1831,6 +1782,16 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                   title="ページ移動"
                 />
               </div>
+
+              {/* 次の1ページボタン */}
+              <button
+                className="page-nav-button"
+                onClick={handleGoToNextPage}
+                disabled={pageNum >= numPages}
+                title="次のページ"
+              >
+                <span>▼</span>
+              </button>
 
               {/* 次の10ページボタン */}
               <button

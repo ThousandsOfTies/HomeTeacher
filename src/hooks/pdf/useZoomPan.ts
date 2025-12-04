@@ -98,9 +98,7 @@ export const useZoomPan = (
       y: e.clientY - panStart.y
     }
 
-    // パン範囲制限を適用
-    const limitedOffset = applyPanLimit(newOffset)
-    setPanOffset(limitedOffset)
+    setPanOffset(newOffset)
   }
 
   const stopPanning = () => {
@@ -130,17 +128,7 @@ export const useZoomPan = (
         const delta = e.deltaY > 0 ? -0.1 : 0.1
         const oldZoom = zoom
         // プリレンダリング: zoom範囲 minFitZoom ～ 1.0
-        let newZoom = Math.min(1.0, oldZoom + delta)
-
-        // フィットサイズより小さくしようとしたら、フィット表示に戻す
-        if (newZoom < minFitZoom) {
-          if (onResetToFit) {
-            onResetToFit()
-            return
-          } else {
-            newZoom = minFitZoom
-          }
-        }
+        let newZoom = Math.max(minFitZoom, Math.min(1.0, oldZoom + delta))
 
         // マウスカーソルを中心にズームするため、パンオフセットを調整
         const containerRect = containerRef.current.getBoundingClientRect()
@@ -163,13 +151,10 @@ export const useZoomPan = (
         const newPanOffsetY = cursorY - (cursorY - panOffset.y) * scaleRatio
 
         setZoom(newZoom)
-        const newOffset = {
+        setPanOffset({
           x: newPanOffsetX,
           y: newPanOffsetY
-        }
-        // パン範囲制限を適用してからセット（新しいズーム値を使用）
-        const limitedOffset = applyPanLimit(newOffset, newZoom)
-        setPanOffset(limitedOffset)
+        })
       }
     }
 
