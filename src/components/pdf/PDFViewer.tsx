@@ -127,13 +127,14 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     doPanning,
     stopPanning,
     resetZoom: hookResetZoom,
-    lastWheelCursor
+    lastWheelCursor,
+    applyPanLimit
   } = useZoomPan(wrapperRef, RENDER_SCALE, minFitZoom, () => {
     // フィットサイズより小さくしようとしたら、フィット表示に戻す
     if (applyFitAndCenterRef.current) {
       applyFitAndCenterRef.current()
     }
-  })
+  }, canvasRef)
 
   const displayZoom = Math.round(renderScale * zoom * 100)
 
@@ -823,7 +824,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     const panX = currentPinchCenterX - pinchCenterRef.current.x
     const panY = currentPinchCenterY - pinchCenterRef.current.y
 
-    setPanOffset({ x: newOriginX + panX, y: newOriginY + panY })
+    // パン範囲制限を適用
+    const newOffset = { x: newOriginX + panX, y: newOriginY + panY }
+    const limitedOffset = applyPanLimit(newOffset, newZoom)
+    setPanOffset(limitedOffset)
     setZoom(newZoom)
   }
 
