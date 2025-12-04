@@ -86,11 +86,14 @@ app.post('/api/grade', async (req, res) => {
     })
   }
   try {
-    const { imageData, pageNumber, problemContext, language } = req.body
+    const { imageData, pageNumber, problemContext, language, model } = req.body
 
     if (!imageData) {
       return res.status(400).json({ error: '画像データが必要です' })
     }
+
+    console.log(`🤖 リクエストされたモデル: ${model || 'default'}`)
+
 
     // 言語マッピング（navigator.language → 言語名）
     const languageMap: Record<string, string> = {
@@ -138,14 +141,34 @@ app.post('/api/grade', async (req, res) => {
     fs.writeFileSync(debugImagePath, Buffer.from(base64Data, 'base64'))
     console.log(`🖼️ デバッグ画像を保存: ${debugImagePath}`)
 
-    // Gemini 2.5 Flash モデルを使用（最新・高速・高性能）
-    // 優先: gemini-2.5-flash (最新安定版、2025年GA)
-    // フォールバック: gemini-2.0-flash (旧安定版)
-    // .envで GEMINI_MODEL を設定して切り替え可能
-    const preferredModelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
-    const fallbackModelName = 'gemini-2.0-flash'
+    // モデル選択ロジック
+    // 1. リクエストで指定されたモデルを優先
+    // 2. なければ環境変数 GEMINI_MODEL
+    // 3. デフォルトは gemini-2.0-flash-exp
+    let preferredModelName = model || process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
 
-    console.log(`🤖 優先モデル: ${preferredModelName}`)
+    // Gemini系モデルのマッピング（フロントエンドのモデルIDをAPIモデル名に変換）
+    const geminiModelMap: Record<string, string> = {
+      'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+      'gemini-2.0-flash-thinking-exp': 'gemini-2.0-flash-thinking-exp-01-21',
+      'gemini-1.5-pro': 'gemini-1.5-pro',
+      'gemini-1.5-flash': 'gemini-1.5-flash'
+    }
+
+    // モデル名をマッピング（Geminiモデルの場合）
+    if (preferredModelName in geminiModelMap) {
+      preferredModelName = geminiModelMap[preferredModelName]
+    }
+
+    // Gemini以外のモデル（GPT/Claude）が指定された場合の処理
+    if (preferredModelName.startsWith('gpt-') || preferredModelName.startsWith('o1') || preferredModelName.startsWith('claude-')) {
+      console.warn(`⚠️ ${preferredModelName} は未対応です。Geminiモデルにフォールバックします。`)
+      preferredModelName = 'gemini-2.0-flash-exp'
+    }
+
+    const fallbackModelName = 'gemini-2.0-flash-exp'
+
+    console.log(`🤖 使用するモデル: ${preferredModelName}`)
 
     const prompt = `You are an experienced teacher grading student work. Analyze this image carefully and provide detailed, educational feedback.
 
