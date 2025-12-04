@@ -1493,20 +1493,38 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                         cursor: 'pointer'
                       }}
                     >
-                      <option value="default">デフォルト（Gemini）</option>
-                      <option value="gemini-2.5-flash-exp">Gemini 2.5 Flash Exp</option>
-                      <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                      <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                      <option value="gpt-4o">GPT-4o</option>
-                      <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                      <option value="default">デフォルト</option>
+                      <optgroup label="Gemini (Google)">
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Exp</option>
+                        <option value="gemini-2.0-flash-thinking-exp">Gemini 2.0 Flash Thinking</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                      </optgroup>
+                      <optgroup label="GPT (OpenAI)">
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini</option>
+                        <option value="o1">o1 (推論)</option>
+                        <option value="o1-mini">o1-mini</option>
+                      </optgroup>
+                      <optgroup label="Claude (Anthropic)">
+                        <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet v2</option>
+                        <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                        <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                      </optgroup>
                     </select>
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                       {selectedModel === 'default' && '✨ バックエンドのデフォルトモデルを使用'}
-                      {selectedModel === 'gemini-2.5-flash-exp' && '🆕 最新実験モデル、高速'}
-                      {selectedModel === 'gemini-1.5-pro' && '🚀 高精度、やや遅い'}
+                      {selectedModel === 'gemini-2.0-flash-exp' && '🆕 最新Gemini、マルチモーダル対応'}
+                      {selectedModel === 'gemini-2.0-flash-thinking-exp' && '🧠 推論特化型Gemini'}
+                      {selectedModel === 'gemini-1.5-pro' && '🚀 高精度、長文対応'}
                       {selectedModel === 'gemini-1.5-flash' && '⚡ 高速、低コスト'}
-                      {selectedModel === 'gpt-4o' && '🎯 OpenAI最新モデル'}
-                      {selectedModel === 'claude-3.5-sonnet' && '🎨 Anthropic最新モデル'}
+                      {selectedModel === 'gpt-4o' && '🎯 GPT-4 Optimized'}
+                      {selectedModel === 'gpt-4o-mini' && '💨 軽量版GPT-4o'}
+                      {selectedModel === 'o1' && '🤔 高度な推論モデル'}
+                      {selectedModel === 'o1-mini' && '💡 軽量推論モデル'}
+                      {selectedModel === 'claude-3-5-sonnet-20241022' && '🎨 最新Claude、高精度'}
+                      {selectedModel === 'claude-3-5-haiku-20241022' && '📝 高速Claude'}
+                      {selectedModel === 'claude-3-opus-20240229' && '👑 最高性能Claude'}
                     </div>
                   </div>
                 </div>
