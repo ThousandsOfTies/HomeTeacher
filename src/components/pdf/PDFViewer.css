@@ -162,7 +162,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
+  padding: 2rem 2rem 3rem 2rem; /* 下側に余裕を持たせる */
   min-height: 0;
   /* flexアイテムがコンテナをはみ出さないようにする */
 }

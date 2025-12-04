@@ -488,7 +488,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
     // 画面にフィットさせるスケールを計算
     const scaleX = containerWidth / actualPdfWidth
     const scaleY = containerHeight / actualPdfHeight
-    const fitScale = Math.min(scaleX, scaleY) * 0.95 // 95%に縮小して余白を確保
+    const fitScale = Math.min(scaleX, scaleY) * 0.90 // 90%に縮小して余白を確保（特にiPadで下部が見切れないように）
 
     // fitScale は実際のPDF基準なので、zoom値に変換
     // zoom = fitScale / RENDER_SCALE
