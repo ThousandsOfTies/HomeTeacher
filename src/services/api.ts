@@ -47,7 +47,8 @@ export interface GradeResponse {
 export const gradeWork = async (
   imageData: string,
   pageNumber: number,
-  problemContext?: string
+  problemContext?: string,
+  model?: string
 ): Promise<GradeResponse> => {
   try {
     // ユーザーの言語設定を取得（例: 'ja', 'en-US', 'zh-CN'）
@@ -57,6 +58,7 @@ export const gradeWork = async (
       url: `${API_BASE_URL}/grade`,
       pageNumber,
       language: userLanguage,
+      model: model || 'default',
       imageDataSize: imageData.length
     })
 
@@ -70,6 +72,7 @@ export const gradeWork = async (
         pageNumber,
         problemContext,
         language: userLanguage,
+        model: model || undefined, // モデルが指定されている場合のみ送信
       }),
     })
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import { gradeWork, GradingResult as GradingResultType } from '../../services/api'
 import GradingResult from '../grading/GradingResult'
-import { savePDFRecord, getPDFRecord, getAllSNSLinks, SNSLinkRecord, PDFFileRecord, saveGradingHistory, generateGradingHistoryId, getAppSettings } from '../../utils/indexedDB'
+import { savePDFRecord, getPDFRecord, getAllSNSLinks, SNSLinkRecord, PDFFileRecord, saveGradingHistory, generateGradingHistoryId, getAppSettings, saveAppSettings } from '../../utils/indexedDB'
 import { ICON_SVG } from '../../constants/icons'
 import { usePDFRenderer } from '../../hooks/pdf/usePDFRenderer'
 import { useDrawing, DrawingPath } from '../../hooks/pdf/useDrawing'
@@ -187,6 +187,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const [gradingModelName, setGradingModelName] = useState<string | null>(null)
   const [gradingResponseTime, setGradingResponseTime] = useState<number | null>(null)
 
+  // 採点モデル選択
+  const [selectedModel, setSelectedModel] = useState<string>('default')
+  const [showModelPopup, setShowModelPopup] = useState(false)
+
   // useSelection hook を使用して矩形選択機能を管理
   const {
     isSelectionMode,
@@ -214,6 +218,10 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
         setSnsLinks(links)
         const settings = await getAppSettings()
         setSnsTimeLimit(settings.snsTimeLimitMinutes)
+        // デフォルトモデルを読み込む
+        if (settings.defaultGradingModel) {
+          setSelectedModel(settings.defaultGradingModel)
+        }
       } catch (error) {
         console.error('Failed to load SNS data:', error)
       }
@@ -279,18 +287,19 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   // ポップアップの外側クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showPenPopup || showEraserPopup) {
+      if (showPenPopup || showEraserPopup || showModelPopup) {
         const target = event.target as HTMLElement
         // ポップアップやボタン以外をクリックした場合は閉じる
         if (!target.closest('.tool-popup') && !target.closest('button')) {
           setShowPenPopup(false)
           setShowEraserPopup(false)
+          setShowModelPopup(false)
         }
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showPenPopup, showEraserPopup])
+  }, [showPenPopup, showEraserPopup, showModelPopup])
 
   // 保存されているペン跡を読み込む（PDF読み込み完了後）
   useEffect(() => {
@@ -1283,8 +1292,13 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
       }
 
       // APIに送信
-      console.log('📤 APIに送信中...')
-      const response = await gradeWork(imageData, pageNum)
+      console.log('📤 APIに送信中...', { model: selectedModel })
+      const response = await gradeWork(
+        imageData,
+        pageNum,
+        undefined, // problemContext
+        selectedModel !== 'default' ? selectedModel : undefined // モデル指定
+      )
 
       if (response.success) {
         setGradingResult(response.result)
@@ -1445,6 +1459,57 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
             >
               {isGrading ? '⏳' : '✅'}
             </button>
+
+            {/* AIモデル選択 */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowModelPopup(!showModelPopup)}
+                title="AIモデル選択"
+                style={{ fontSize: '20px', padding: '4px 8px' }}
+              >
+                🤖
+              </button>
+
+              {/* モデル選択ポップアップ */}
+              {showModelPopup && (
+                <div className="tool-popup" style={{ minWidth: '200px' }}>
+                  <div className="popup-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
+                    <label style={{ fontWeight: 'bold', marginBottom: '4px' }}>AIモデル:</label>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => {
+                        setSelectedModel(e.target.value)
+                        // 設定を保存
+                        getAppSettings().then(settings => {
+                          settings.defaultGradingModel = e.target.value
+                          saveAppSettings(settings)
+                        })
+                      }}
+                      style={{
+                        padding: '6px',
+                        borderRadius: '4px',
+                        border: '1px solid #ccc',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="default">デフォルト（Gemini）</option>
+                      <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                      <option value="gpt-4o">GPT-4o</option>
+                      <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                    </select>
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      {selectedModel === 'default' && '✨ バックエンドのデフォルトモデルを使用'}
+                      {selectedModel === 'gemini-1.5-pro' && '🚀 高精度、やや遅い'}
+                      {selectedModel === 'gemini-1.5-flash' && '⚡ 高速、低コスト'}
+                      {selectedModel === 'gpt-4o' && '🎯 OpenAI最新モデル'}
+                      {selectedModel === 'claude-3.5-sonnet' && '🎨 Anthropic最新モデル'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* 描画ツール */}
             <div style={{ position: 'relative' }}>
