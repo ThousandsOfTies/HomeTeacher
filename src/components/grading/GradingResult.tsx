@@ -256,18 +256,16 @@ const GradingResult = ({ result, onClose, snsLinks = [], timeLimitMinutes = 30, 
           </div>
         )}
 
-        {(modelName || responseTime !== null) && (
-          <div className="model-info-footer">
-            <div className="model-info-text">
-              {modelName && responseTime !== null && responseTime !== undefined
-                ? `${modelName} (${responseTime}s)`
-                : modelName || `${responseTime}s`}
-            </div>
-            <button className="footer-close-btn" onClick={onClose}>
-              閉じる
-            </button>
+        <div className="model-info-footer">
+          <div className="model-info-text">
+            {modelName && responseTime != null
+              ? `${modelName} (${responseTime}s)`
+              : modelName || (responseTime != null ? `${responseTime}s` : '')}
           </div>
-        )}
+          <button className="footer-close-btn" onClick={onClose}>
+            閉じる
+          </button>
+        </div>
       </div>
     </div>
   )

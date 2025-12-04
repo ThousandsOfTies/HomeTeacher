@@ -170,7 +170,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   const [showPenPopup, setShowPenPopup] = useState(false)
 
   // 消しゴムの設定
-  const [eraserSize, setEraserSize] = useState(20)
+  const [eraserSize, setEraserSize] = useState(50)
   const [showEraserPopup, setShowEraserPopup] = useState(false)
   const [eraserCursorPos, setEraserCursorPos] = useState<{ x: number, y: number } | null>(null)
 
@@ -189,7 +189,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
 
   // 採点モデル選択
   const [selectedModel, setSelectedModel] = useState<string>('default')
-  const [showModelPopup, setShowModelPopup] = useState(false)
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([])
   const [defaultModel, setDefaultModel] = useState<string>('gemini-2.0-flash-exp')
 
@@ -305,19 +304,18 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
   // ポップアップの外側クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showPenPopup || showEraserPopup || showModelPopup) {
+      if (showPenPopup || showEraserPopup) {
         const target = event.target as HTMLElement
         // ポップアップやボタン以外をクリックした場合は閉じる
         if (!target.closest('.tool-popup') && !target.closest('button')) {
           setShowPenPopup(false)
           setShowEraserPopup(false)
-          setShowModelPopup(false)
         }
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showPenPopup, showEraserPopup, showModelPopup])
+  }, [showPenPopup, showEraserPopup])
 
   // 保存されているペン跡を読み込む（PDF読み込み完了後）
   useEffect(() => {
@@ -1478,54 +1476,6 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               {isGrading ? '⏳' : '✅'}
             </button>
 
-            {/* AIモデル選択 */}
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowModelPopup(!showModelPopup)}
-                title="AIモデル選択"
-              >
-                🤖
-              </button>
-
-              {/* モデル選択ポップアップ */}
-              {showModelPopup && (
-                <div className="tool-popup" style={{ minWidth: '200px' }}>
-                  <div className="popup-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
-                    <label style={{ fontWeight: 'bold', marginBottom: '4px' }}>AIモデル:</label>
-                    <select
-                      value={selectedModel}
-                      onChange={(e) => {
-                        setSelectedModel(e.target.value)
-                        // 設定を保存
-                        getAppSettings().then(settings => {
-                          settings.defaultGradingModel = e.target.value
-                          saveAppSettings(settings)
-                        })
-                      }}
-                      style={{
-                        padding: '6px',
-                        borderRadius: '4px',
-                        border: '1px solid #ccc',
-                        fontSize: '14px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <option value="default">デフォルト ({defaultModel})</option>
-                      {availableModels.map(model => (
-                        <option key={model.id} value={model.id}>
-                          {model.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                      {selectedModel === 'default' && `✨ ${defaultModel} を使用`}
-                      {availableModels.find(m => m.id === selectedModel)?.description}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* 描画ツール */}
             <div style={{ position: 'relative' }}>
               <button
@@ -1581,7 +1531,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                     <input
                       type="range"
                       min="10"
-                      max="50"
+                      max="100"
                       value={eraserSize}
                       onChange={(e) => setEraserSize(Number(e.target.value))}
                       style={{ width: '100px' }}
@@ -1687,7 +1637,12 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               {/* 上端ボタン - 前のページ */}
               {pageNum > 1 && (
                 <button
-                  onClick={handleGoToPrevPage}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleGoToPrevPage()
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   style={{
                     position: 'absolute',
                     top: '20px',
@@ -1713,7 +1668,12 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               {/* 下端ボタン - 次のページ */}
               {pageNum < numPages && (
                 <button
-                  onClick={handleGoToNextPage}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleGoToNextPage()
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   style={{
                     position: 'absolute',
                     bottom: '20px',
@@ -1922,6 +1882,32 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
               <h3>📐 この範囲を採点しますか？</h3>
               <div className="preview-image-container">
                 <img src={selectionPreview} alt="選択範囲のプレビュー" className="preview-image" />
+              </div>
+              <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>AIモデル:</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    border: '1px solid #ccc',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="default">デフォルト ({defaultModel})</option>
+                  {availableModels.map(model => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  {selectedModel === 'default' && `✨ ${defaultModel} を使用`}
+                  {availableModels.find(m => m.id === selectedModel)?.description}
+                </div>
               </div>
               <div className="confirm-buttons">
                 <button onClick={cancelPreview} className="cancel-button">
