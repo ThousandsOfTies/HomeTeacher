@@ -4,7 +4,8 @@ export const useZoomPan = (
   containerRef: React.RefObject<HTMLDivElement>,
   renderScale: number = 5.0,
   minFitZoom: number = 1.0 / 5.0,
-  onResetToFit?: () => void
+  onResetToFit?: () => void,
+  canvasRef?: React.RefObject<HTMLCanvasElement>
 ) => {
   // プリレンダリング戦略: 初期zoom = 1/RENDER_SCALE（等倍表示）
   const [zoom, setZoom] = useState(1.0 / renderScale)
@@ -23,13 +24,57 @@ export const useZoomPan = (
     setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y })
   }
 
+  // パン範囲制限を適用する関数（常に2/3が表示されるように）
+  const applyPanLimit = (offset: { x: number; y: number }, currentZoom?: number): { x: number; y: number } => {
+    if (!containerRef.current || !canvasRef?.current) {
+      return offset
+    }
+
+    const container = containerRef.current
+    const canvas = canvasRef.current
+
+    // PDFの表示サイズ（ズーム適用後）
+    const zoomValue = currentZoom ?? zoom
+    const displayWidth = canvas.width * zoomValue
+    const displayHeight = canvas.height * zoomValue
+
+    // コンテナのサイズ
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+
+    // 表示されているPDFの部分が常に2/3以上になるように制限
+    // PDFが画面より大きい場合のみ制限を適用
+    let limitedX = offset.x
+    let limitedY = offset.y
+
+    if (displayWidth > containerWidth) {
+      // X方向の制限: PDFの左端1/3まで隠れる、右端1/3まで隠れる
+      const minX = -displayWidth / 3  // PDFが左にパンした時の最小値
+      const maxX = containerWidth - displayWidth * (2 / 3)  // PDFが右にパンした時の最大値
+      limitedX = Math.max(minX, Math.min(maxX, offset.x))
+    }
+
+    if (displayHeight > containerHeight) {
+      // Y方向の制限: PDFの上端1/3まで隠れる、下端1/3まで隠れる
+      const minY = -displayHeight / 3  // PDFが上にパンした時の最小値
+      const maxY = containerHeight - displayHeight * (2 / 3)  // PDFが下にパンした時の最大値
+      limitedY = Math.max(minY, Math.min(maxY, offset.y))
+    }
+
+    return { x: limitedX, y: limitedY }
+  }
+
   const doPanning = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isPanning) return
 
-    setPanOffset({
+    const newOffset = {
       x: e.clientX - panStart.x,
       y: e.clientY - panStart.y
-    })
+    }
+
+    // パン範囲制限を適用
+    const limitedOffset = applyPanLimit(newOffset)
+    setPanOffset(limitedOffset)
   }
 
   const stopPanning = () => {
@@ -96,7 +141,9 @@ export const useZoomPan = (
           x: newPanOffsetX,
           y: newPanOffsetY
         }
-        setPanOffset(newOffset)
+        // パン範囲制限を適用してからセット（新しいズーム値を使用）
+        const limitedOffset = applyPanLimit(newOffset, newZoom)
+        setPanOffset(limitedOffset)
       }
     }
 
@@ -140,6 +187,7 @@ export const useZoomPan = (
     doPanning,
     stopPanning,
     resetZoom,
-    lastWheelCursor
+    lastWheelCursor,
+    applyPanLimit
   }
 }
