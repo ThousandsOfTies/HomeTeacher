@@ -51,14 +51,40 @@ export const useZoomPan = (
       // X方向の制限: PDFの左端1/3まで隠れる、右端1/3まで隠れる
       const minX = -displayWidth / 3  // PDFが左にパンした時の最小値
       const maxX = containerWidth - displayWidth * (2 / 3)  // PDFが右にパンした時の最大値
+      const originalX = limitedX
       limitedX = Math.max(minX, Math.min(maxX, offset.x))
+
+      // デバッグログ（制限が適用された場合のみ）
+      if (originalX !== limitedX) {
+        console.log('🔒 X方向パン制限適用:', {
+          displayWidth,
+          containerWidth,
+          minX,
+          maxX,
+          requestedX: offset.x,
+          limitedX
+        })
+      }
     }
 
     if (displayHeight > containerHeight) {
       // Y方向の制限: PDFの上端1/3まで隠れる、下端1/3まで隠れる
       const minY = -displayHeight / 3  // PDFが上にパンした時の最小値
       const maxY = containerHeight - displayHeight * (2 / 3)  // PDFが下にパンした時の最大値
+      const originalY = limitedY
       limitedY = Math.max(minY, Math.min(maxY, offset.y))
+
+      // デバッグログ（制限が適用された場合のみ）
+      if (originalY !== limitedY) {
+        console.log('🔒 Y方向パン制限適用:', {
+          displayHeight,
+          containerHeight,
+          minY,
+          maxY,
+          requestedY: offset.y,
+          limitedY
+        })
+      }
     }
 
     return { x: limitedX, y: limitedY }

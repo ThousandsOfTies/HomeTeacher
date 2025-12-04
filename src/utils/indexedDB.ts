@@ -45,6 +45,7 @@ export interface AppSettings {
   id: 'app-settings'; // 固定ID
   snsTimeLimitMinutes: number; // SNS利用制限時間（分）
   notificationEnabled: boolean; // 通知の有効/無効
+  defaultGradingModel?: string; // 採点時のデフォルトAIモデル
 }
 
 export interface SNSUsageHistoryRecord {
@@ -477,8 +478,13 @@ export async function getAppSettings(): Promise<AppSettings> {
 
     request.onsuccess = () => {
       const settings = request.result as AppSettings | undefined;
-      // デフォルト値: 30分、通知無効
-      resolve(settings || { id: 'app-settings', snsTimeLimitMinutes: 30, notificationEnabled: false });
+      // デフォルト値: 30分、通知無効、モデルは未指定（バックエンドのデフォルト使用）
+      resolve(settings || {
+        id: 'app-settings',
+        snsTimeLimitMinutes: 30,
+        notificationEnabled: false,
+        defaultGradingModel: undefined
+      });
     };
 
     request.onerror = () => {
