@@ -9,6 +9,40 @@ dotenv.config()
 const app = express()
 const port = process.env.PORT || 3003
 
+// 利用可能なGeminiモデルのマッピング
+const AVAILABLE_MODELS: Record<string, { id: string; name: string; description: string }> = {
+  'gemini-2.5-flash': {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    description: '最新の高速安定版モデル（2025年6月リリース）'
+  },
+  'gemini-2.5-pro': {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    description: '最新の高性能安定版モデル（2025年6月リリース）'
+  },
+  'gemini-2.0-flash-exp': {
+    id: 'gemini-2.0-flash-exp',
+    name: 'Gemini 2.0 Flash (Experimental)',
+    description: '実験版の高速モデル'
+  },
+  'gemini-2.0-flash': {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
+    description: '安定版の高速モデル'
+  },
+  'gemini-1.5-pro': {
+    id: 'gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
+    description: '高性能な安定版モデル'
+  },
+  'gemini-1.5-flash': {
+    id: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    description: '高速な安定版モデル'
+  }
+}
+
 // CORS設定（セキュリティ強化版）
 const allowedOrigins = [
   // 本番環境（GitHub Pages）
@@ -147,17 +181,9 @@ app.post('/api/grade', async (req, res) => {
     // 3. デフォルトは gemini-2.0-flash-exp
     let preferredModelName = model || process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
 
-    // Gemini系モデルのマッピング（フロントエンドのモデルIDをAPIモデル名に変換）
-    const geminiModelMap: Record<string, string> = {
-      'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
-      'gemini-2.0-flash-thinking-exp': 'gemini-2.0-flash-thinking-exp-01-21',
-      'gemini-1.5-pro': 'gemini-1.5-pro',
-      'gemini-1.5-flash': 'gemini-1.5-flash'
-    }
-
     // モデル名をマッピング（Geminiモデルの場合）
-    if (preferredModelName in geminiModelMap) {
-      preferredModelName = geminiModelMap[preferredModelName]
+    if (preferredModelName in AVAILABLE_MODELS) {
+      preferredModelName = AVAILABLE_MODELS[preferredModelName].id
     }
 
     // Gemini以外のモデル（GPT/Claude）が指定された場合の処理
@@ -388,6 +414,14 @@ OUTPUT: Valid JSON only - no markdown formatting, no code blocks.`
   }
 })
 
+// 利用可能なモデル一覧を取得
+app.get('/api/models', (req, res) => {
+  res.json({
+    models: Object.values(AVAILABLE_MODELS),
+    default: process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
+  })
+})
+
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
   res.json({
@@ -395,22 +429,6 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     geminiApiKey: process.env.GEMINI_API_KEY ? '設定済み' : '未設定'
   })
-})
-
-// 利用可能なモデル一覧を取得
-app.get('/api/models', async (req, res) => {
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`
-    )
-    const data = await response.json()
-    res.json(data)
-  } catch (error) {
-    res.status(500).json({
-      error: 'モデル一覧の取得に失敗しました',
-      details: error instanceof Error ? error.message : String(error)
-    })
-  }
 })
 
 app.listen(port, () => {

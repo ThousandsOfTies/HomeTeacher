@@ -132,3 +132,35 @@ export const checkHealth = async (): Promise<boolean> => {
     return false
   }
 }
+
+export interface ModelInfo {
+  id: string
+  name: string
+  description: string
+}
+
+export interface ModelsResponse {
+  models: ModelInfo[]
+  default: string
+}
+
+export const getAvailableModels = async (): Promise<ModelsResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/models`)
+    if (!response.ok) {
+      throw new Error('モデル一覧の取得に失敗しました')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Models API Error:', error)
+    // フォールバック: デフォルトのモデルリストを返す
+    return {
+      models: [
+        { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Experimental)', description: '実験版の高速モデル' },
+        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: '高性能な安定版モデル' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: '高速な安定版モデル' }
+      ],
+      default: 'gemini-2.0-flash-exp'
+    }
+  }
+}
