@@ -1494,6 +1494,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                       }}
                     >
                       <option value="default">デフォルト（Gemini）</option>
+                      <option value="gemini-2.5-flash-exp">Gemini 2.5 Flash Exp</option>
                       <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                       <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                       <option value="gpt-4o">GPT-4o</option>
@@ -1501,6 +1502,7 @@ const PDFViewer = ({ pdfRecord, pdfId, onBack }: PDFViewerProps) => {
                     </select>
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                       {selectedModel === 'default' && '✨ バックエンドのデフォルトモデルを使用'}
+                      {selectedModel === 'gemini-2.5-flash-exp' && '🆕 最新実験モデル、高速'}
                       {selectedModel === 'gemini-1.5-pro' && '🚀 高精度、やや遅い'}
                       {selectedModel === 'gemini-1.5-flash' && '⚡ 高速、低コスト'}
                       {selectedModel === 'gpt-4o' && '🎯 OpenAI最新モデル'}
