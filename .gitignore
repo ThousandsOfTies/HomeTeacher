@@ -7,11 +7,15 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Build artifacts (generated in repos/)
 node_modules
 dist
 dist-ssr
 deploy
 *.local
+
+# Package lock files (managed in each repo)
+package-lock.json
 
 # Editor directories and files
 .vscode/*
@@ -24,10 +28,15 @@ deploy
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables (managed in each repo)
 .env
 .env.local
 .env.production
+.env.*
 
-# PDF files
+# PDF files (managed in repos/)
 PDFs/
+
+# Cloned repositories (managed by Makefile)
+# すべてのソースコードはrepos/配下で管理される
+repos/

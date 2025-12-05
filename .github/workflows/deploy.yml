@@ -26,32 +26,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Clone dependencies
+        run: make clone
 
       - name: Install dependencies
-        run: npm ci
+        run: make install
+
+      - name: Build dependencies
+        run: make build-repos
 
       - name: Build Kids version
-        run: npm run build:kids
+        run: make build:kids
         env:
           NODE_ENV: production
 
       - name: Move Kids build to deploy directory
         run: |
           mkdir -p deploy
-          cp -r dist/* deploy/
-          rm -rf dist
+          cp -r repos/home-teacher-core/dist/* deploy/
 
       - name: Build Discuss version
-        run: npm run build:discuss
+        run: make build:discuss
         env:
           NODE_ENV: production
 
       - name: Move Discuss build to deploy/discuss
         run: |
           mkdir -p deploy/discuss
-          cp -r dist/* deploy/discuss/
-          rm -rf dist
+          cp -r repos/home-teacher-core/dist/* deploy/discuss/
 
       - name: Add .nojekyll file
         run: touch deploy/.nojekyll
