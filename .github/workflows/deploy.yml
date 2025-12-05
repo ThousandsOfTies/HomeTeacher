@@ -27,6 +27,10 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Configure Git for private repos
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          
       - name: Clone dependencies
         run: make clone
 
