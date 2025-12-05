@@ -195,3 +195,4 @@ REPOSITORIES := \
 - メタリポジトリの問題: https://github.com/ThousandsOfTies/HomeTeacher/issues
 - アプリの問題: https://github.com/ThousandsOfTies/home-teacher-core/issues
 - 描画機能の問題: https://github.com/ThousandsOfTies/drawing-common/issues
+
