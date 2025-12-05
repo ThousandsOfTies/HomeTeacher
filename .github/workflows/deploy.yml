@@ -26,6 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Configure Git for private repos
         run: |
@@ -36,6 +37,17 @@ jobs:
 
       - name: Install dependencies
         run: make install
+
+      - name: Verify workspace structure
+        run: |
+          echo "=== Workspace structure ==="
+          ls -la repos/
+          echo "=== drawing-common node_modules ==="
+          ls -la repos/drawing-common/node_modules/ | head -20
+          echo "=== Check @types/react ==="
+          ls -la repos/drawing-common/node_modules/@types/ || echo "No @types in drawing-common"
+          echo "=== Check root node_modules ==="
+          ls -la node_modules/@types/ | head -20
 
       - name: Build dependencies
         run: make build-repos
