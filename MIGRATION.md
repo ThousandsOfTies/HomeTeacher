@@ -127,12 +127,26 @@ home-teacher-core/package.jsonで、drawing-commonの参照を更新：
 ```json
 {
   "dependencies": {
-    "@thousands-of-ties/drawing-common": "file:../drawing-common"
+    "@thousands-of-ties/drawing-common": "*"
   }
 }
 ```
 
-これにより、`repos/`内で相対パスで参照できます。
+また、HomeTeacherルートにpackage.jsonを作成してnpm workspacesを設定：
+
+```json
+{
+  "name": "home-teacher-meta",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "repos/drawing-common",
+    "repos/home-teacher-core"
+  ]
+}
+```
+
+これにより、`npm install` で全workspaceの依存関係が一括管理されます。
 
 ### ステップ4: HomeTeacherリポジトリをクリーンアップ
 
@@ -154,13 +168,14 @@ rm -rf node_modules dist deploy
 # - README.md
 ```
 
-### ステップ5: package.jsonを削除または最小化
+### ステップ5: npm workspacesの設定
 
-メタリポジトリにはpackage.jsonは不要なので削除：
+メタリポジトリのpackage.jsonを更新してworkspacesを設定（既に作成済み）：
 
 ```bash
 cd c:/VibeCode/HomeTeacher
-rm -f package.json package-lock.json
+# package.jsonは既にworkspaces設定を含んでいる
+cat package.json
 ```
 
 ### ステップ6: 動作確認
@@ -220,13 +235,24 @@ git clone https://github.com/ThousandsOfTies/home-teacher-core.git
 
 #### drawing-commonの参照エラー
 
-home-teacher-core/package.jsonで相対パス参照を確認：
+home-teacher-core/package.jsonでworkspace参照を確認：
 
 ```json
 {
   "dependencies": {
-    "@thousands-of-ties/drawing-common": "file:../drawing-common"
+    "@thousands-of-ties/drawing-common": "*"
   }
+}
+```
+
+ルートのpackage.jsonでworkspacesが正しく設定されているか確認：
+
+```json
+{
+  "workspaces": [
+    "repos/drawing-common",
+    "repos/home-teacher-core"
+  ]
 }
 ```
 
@@ -244,13 +270,14 @@ make setup
 
 ### HomeTeacher（メタリポジトリ）
 - **役割**: 統合管理・ビルド・デプロイ
-- **含むもの**: Makefile、Repos.mk、GitHub Actions設定
-- **含まないもの**: ソースコード、package.json
+- **含むもの**: Makefile、Repos.mk、GitHub Actions設定、package.json（workspaces設定）
+- **含まないもの**: アプリのソースコード
+- **npm workspaces**: repos/配下のすべてのパッケージを統合管理
 
 ### home-teacher-core
 - **役割**: アプリケーション本体
 - **含むもの**: src/, package.json, vite.config.ts, etc.
-- **依存**: drawing-common (相対パス `file:../drawing-common`)
+- **依存**: drawing-common (npm workspaces経由 `"*"`)
 
 ### drawing-common
 - **役割**: 共通ライブラリ
@@ -261,14 +288,15 @@ make setup
 
 1. ✅ **単一リポジトリでセットアップ完了**: `git clone HomeTeacher && make setup`
 2. ✅ **依存関係が明示的**: Repos.mkで一元管理
-3. ✅ **コードの再利用性向上**: drawing-common、home-teacher-coreを他のプロジェクトでも利用可能
-4. ✅ **GitHub Actions簡素化**: メタリポジトリの設定のみ更新すればOK
+3. ✅ **npm workspacesで統合管理**: 依存パッケージの解決が自動化
+4. ✅ **コードの再利用性向上**: drawing-common、home-teacher-coreを他のプロジェクトでも利用可能
+5. ✅ **GitHub Actions簡素化**: メタリポジトリの設定のみ更新すればOK
 
 ## 📝 注意事項
 
-- **package.json削除**: メタリポジトリにはpackage.jsonは不要
+- **npm workspaces**: メタリポジトリのpackage.jsonでworkspacesを設定
 - **repos/はgitignore**: すべてのソースコードはrepos/配下で管理
-- **相対パス参照**: home-teacher-coreからdrawing-commonは`file:../drawing-common`で参照
+- **workspace参照**: home-teacher-coreからdrawing-commonは`"*"`で参照（workspaces経由で自動解決）
 
 ## 🆘 ヘルプ
 

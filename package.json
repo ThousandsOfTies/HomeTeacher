@@ -1,0 +1,23 @@
+{
+  "name": "home-teacher-meta",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HomeTeacher meta-repository for integrated build and deployment",
+  "workspaces": [
+    "repos/drawing-common",
+    "repos/home-teacher-core"
+  ],
+  "scripts": {
+    "postinstall": "npm run build:drawing-common",
+    "build:drawing-common": "npm run build --workspace=@thousands-of-ties/drawing-common",
+    "dev": "npm run dev --workspace=tutotuto",
+    "dev:discuss": "npm run dev:discuss --workspace=tutotuto",
+    "build:kids": "npm run build:kids --workspace=tutotuto",
+    "build:discuss": "npm run build:discuss --workspace=tutotuto",
+    "build:all": "npm run build:all --workspace=tutotuto"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

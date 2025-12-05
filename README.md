@@ -33,13 +33,22 @@ For university students and professionals focused on note-taking and discussion.
 
 ```
 HomeTeacher/ (このリポジトリ - メタリポジトリ)
-├── Makefile             # 統合ビルド管理
+├── package.json        # npm workspaces設定
+├── Makefile            # 統合ビルド管理
 ├── Repos.mk            # 依存リポジトリ定義
 ├── .github/workflows/  # GitHub Pages自動デプロイ
 └── repos/              # 依存リポジトリ（自動clone、gitignore）
     ├── drawing-common/      # 描画共通ライブラリ
     └── home-teacher-core/   # HomeTeacherアプリ本体
 ```
+
+### ⚙️ npm Workspaces
+
+このプロジェクトは **npm workspaces** を使用して複数のリポジトリを統合管理しています。
+
+- `npm install` を実行すると、すべてのworkspace（drawing-common、home-teacher-core）の依存関係が一括インストールされます
+- home-teacher-coreからdrawing-commonへの参照は自動的に解決されます
+- ルートの `package.json` でビルドスクリプトを一元管理できます
 
 ### 📦 依存リポジトリ
 

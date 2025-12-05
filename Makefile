@@ -61,30 +61,16 @@ pull:
 	)
 	@echo "$(GREEN)✅ 更新完了$(NC)"
 
-## install: すべての依存関係をインストール
+## install: すべての依存関係をインストール（npm workspaces使用）
 install: clone
-	@echo "$(BLUE)📦 依存関係をインストール中...$(NC)"
-	@# 依存リポジトリのインストール
-	@$(foreach name,$(REPO_NAMES), \
-		if [ -f "$(REPOS_DIR)/$(name)/package.json" ]; then \
-			echo "$(BLUE)📦 $(name) の依存関係をインストール中...$(NC)"; \
-			cd $(REPOS_DIR)/$(name) && npm install; \
-		fi; \
-	)
-	@# HomeTeacherのインストール
-	@echo "$(BLUE)📦 HomeTeacher の依存関係をインストール中...$(NC)"
+	@echo "$(BLUE)📦 依存関係をインストール中（npm workspaces）...$(NC)"
 	@npm install
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
-## build-repos: 依存リポジトリをビルド
-build-repos: clone
-	@echo "$(BLUE)🔨 依存リポジトリをビルド中...$(NC)"
-	@$(foreach name,$(REPO_NAMES), \
-		if [ -f "$(REPOS_DIR)/$(name)/package.json" ]; then \
-			echo "$(BLUE)🔨 $(name) をビルド中...$(NC)"; \
-			cd $(REPOS_DIR)/$(name) && npm install && npm run build; \
-		fi; \
-	)
+## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
+build-repos: install
+	@echo "$(BLUE)🔨 drawing-common をビルド中...$(NC)"
+	@npm run build:drawing-common
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
 ## build: すべてビルド（依存リポジトリのみ）
@@ -94,30 +80,30 @@ build: build-repos
 ## build:kids: Kids版をビルド
 build\:kids: build-repos
 	@echo "$(BLUE)🏠 HomeTeacher (Kids版) をビルド中...$(NC)"
-	@cd $(REPOS_DIR)/home-teacher-core && npm run build:kids
+	@npm run build:kids
 	@echo "$(GREEN)✅ Kids版のビルドが完了しました$(NC)"
 
 ## build:discuss: Discuss版をビルド
 build\:discuss: build-repos
 	@echo "$(BLUE)🏠 HomeTeacher (Discuss版) をビルド中...$(NC)"
-	@cd $(REPOS_DIR)/home-teacher-core && npm run build:discuss
+	@npm run build:discuss
 	@echo "$(GREEN)✅ Discuss版のビルドが完了しました$(NC)"
 
 ## build:all: すべてのバージョンをビルド
 build\:all: build-repos
 	@echo "$(BLUE)🏠 HomeTeacher (全バージョン) をビルド中...$(NC)"
-	@cd $(REPOS_DIR)/home-teacher-core && npm run build:all
+	@npm run build:all
 	@echo "$(GREEN)✅ 全バージョンのビルドが完了しました$(NC)"
 
 ## dev: 開発モードで起動
 dev: clone install
 	@echo "$(BLUE)🚀 開発サーバーを起動中...$(NC)"
-	@cd $(REPOS_DIR)/home-teacher-core && npm run dev
+	@npm run dev
 
 ## dev:discuss: Discuss版を開発モードで起動
 dev\:discuss: clone install
 	@echo "$(BLUE)🚀 Discuss版 開発サーバーを起動中...$(NC)"
-	@cd $(REPOS_DIR)/home-teacher-core && npm run dev:discuss
+	@npm run dev:discuss
 
 ## clean: ビルド成果物を削除（依存リポジトリは保持）
 clean:
