@@ -8,7 +8,6 @@
     "repos/home-teacher-core"
   ],
   "scripts": {
-    "postinstall": "npm run build:drawing-common",
     "build:drawing-common": "npm run build --workspace=@thousands-of-ties/drawing-common",
     "dev": "npm run dev --workspace=tutotuto",
     "dev:discuss": "npm run dev:discuss --workspace=tutotuto",
