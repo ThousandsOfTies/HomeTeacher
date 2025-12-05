@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl http://localhost:3002/api/models)"
+      "Bash(curl http://localhost:3002/api/models)",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force ''C:\\VibeCode\\tuto-workspace\\apps\\home-teacher''\")",
+      "Bash(meta project import:*)"
     ],
     "deny": [],
     "ask": []
