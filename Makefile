@@ -61,16 +61,18 @@ pull:
 	)
 	@echo "$(GREEN)✅ 更新完了$(NC)"
 
-## install: すべての依存関係をインストール（pnpm使用）
+## install: すべての依存関係をインストール（各リポジトリ個別）
 install: clone
-	@echo "$(BLUE)📦 依存関係をインストール中（pnpm）...$(NC)"
-	@pnpm install --shamefully-hoist
+	@echo "$(BLUE)📦 drawing-common の依存関係をインストール中...$(NC)"
+	@cd repos/drawing-common && pnpm install
+	@echo "$(BLUE)📦 home-teacher-core の依存関係をインストール中...$(NC)"
+	@cd repos/home-teacher-core && pnpm install
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
 build-repos: install
 	@echo "$(BLUE)🔨 drawing-common をビルド中...$(NC)"
-	@pnpm --filter @thousands-of-ties/drawing-common build
+	@cd repos/drawing-common && pnpm run build
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
 ## build: すべてビルド（依存リポジトリのみ）
@@ -80,30 +82,30 @@ build: build-repos
 ## build:kids: Kids版をビルド
 build\:kids: build-repos
 	@echo "$(BLUE)🏠 HomeTeacher (Kids版) をビルド中...$(NC)"
-	@pnpm run build:kids
+	@cd repos/home-teacher-core && pnpm run build:kids
 	@echo "$(GREEN)✅ Kids版のビルドが完了しました$(NC)"
 
 ## build:discuss: Discuss版をビルド
 build\:discuss: build-repos
 	@echo "$(BLUE)🏠 HomeTeacher (Discuss版) をビルド中...$(NC)"
-	@pnpm run build:discuss
+	@cd repos/home-teacher-core && pnpm run build:discuss
 	@echo "$(GREEN)✅ Discuss版のビルドが完了しました$(NC)"
 
 ## build:all: すべてのバージョンをビルド
 build\:all: build-repos
 	@echo "$(BLUE)🏠 HomeTeacher (全バージョン) をビルド中...$(NC)"
-	@pnpm run build:all
+	@cd repos/home-teacher-core && pnpm run build:all
 	@echo "$(GREEN)✅ 全バージョンのビルドが完了しました$(NC)"
 
 ## dev: 開発モードで起動
 dev: clone install
 	@echo "$(BLUE)🚀 開発サーバーを起動中...$(NC)"
-	@pnpm run dev
+	@cd repos/home-teacher-core && pnpm run dev
 
 ## dev:discuss: Discuss版を開発モードで起動
 dev\:discuss: clone install
 	@echo "$(BLUE)🚀 Discuss版 開発サーバーを起動中...$(NC)"
-	@pnpm run dev:discuss
+	@cd repos/home-teacher-core && pnpm run dev:discuss
 
 ## clean: ビルド成果物を削除（依存リポジトリは保持）
 clean:
@@ -119,7 +121,7 @@ clean:
 ## clean-all: すべて削除（依存リポジトリ、node_modules含む）
 clean-all:
 	@echo "$(RED)🗑️  すべてを削除中...$(NC)"
-	@rm -rf $(REPOS_DIR) node_modules
+	@rm -rf $(REPOS_DIR)
 	@echo "$(GREEN)✅ 完全削除完了$(NC)"
 	@echo "$(YELLOW)⚠️  再開するには: make setup$(NC)"
 

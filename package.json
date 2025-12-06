@@ -4,19 +4,15 @@
   "private": true,
   "description": "HomeTeacher meta-repository for integrated build and deployment",
   "scripts": {
-    "build:drawing-common": "pnpm --filter @thousands-of-ties/drawing-common build",
-    "dev": "pnpm --filter tutotuto dev",
-    "dev:discuss": "pnpm --filter tutotuto dev:discuss",
-    "build:kids": "pnpm --filter tutotuto build:kids",
-    "build:discuss": "pnpm --filter tutotuto build:discuss",
-    "build:all": "pnpm --filter tutotuto build:all"
+    "build:drawing-common": "cd repos/drawing-common && pnpm install && pnpm build",
+    "build:home-teacher-core": "cd repos/home-teacher-core && pnpm install",
+    "build:kids": "cd repos/home-teacher-core && pnpm run build:kids",
+    "build:discuss": "cd repos/home-teacher-core && pnpm run build:discuss",
+    "build:all": "cd repos/home-teacher-core && pnpm run build:all",
+    "dev": "cd repos/home-teacher-core && pnpm run dev",
+    "dev:discuss": "cd repos/home-teacher-core && pnpm run dev:discuss"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "typescript": "^5.3.0"
   }
 }
