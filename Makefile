@@ -3,10 +3,33 @@
 
 .PHONY: help setup clone pull install build clean dev test status
 
-# リポジトリ定義を読み込む
-include Repos.mk
+# ============================================
+# リポジトリ定義
+# ============================================
 
+REPOS_DIR := repos
+
+# 依存リポジトリ定義
+# 形式: リポジトリ名|GitHubユーザー/リポジトリ|ブランチ
+REPOSITORIES := \
+	drawing-common|ThousandsOfTies/drawing-common|main \
+	home-teacher-core|ThousandsOfTies/home-teacher-core|main
+
+# リポジトリ情報を解析するヘルパー関数
+define get_repo_info
+$(word $(2),$(subst |, ,$(1)))
+endef
+
+REPO_NAMES := $(foreach repo,$(REPOSITORIES),$(call get_repo_info,$(repo),1))
+
+# パス定義
+DRAWING_COMMON := $(REPOS_DIR)/drawing-common
+HOME_TEACHER_CORE := $(REPOS_DIR)/home-teacher-core
+
+# ============================================
 # カラー出力
+# ============================================
+
 GREEN  := \033[0;32m
 BLUE   := \033[0;34m
 YELLOW := \033[0;33m
@@ -14,6 +37,10 @@ RED    := \033[0;31m
 NC     := \033[0m
 
 .DEFAULT_GOAL := help
+
+# ============================================
+# コマンド
+# ============================================
 
 ## help: ヘルプを表示
 help:
@@ -64,15 +91,15 @@ pull:
 ## install: すべての依存関係をインストール（各リポジトリ個別）
 install: clone
 	@echo "$(BLUE)📦 drawing-common の依存関係をインストール中...$(NC)"
-	@cd repos/drawing-common && pnpm install --no-frozen-lockfile
+	@cd $(DRAWING_COMMON) && pnpm install --no-frozen-lockfile
 	@echo "$(BLUE)📦 home-teacher-core の依存関係をインストール中...$(NC)"
-	@cd repos/home-teacher-core && pnpm install --no-frozen-lockfile
+	@cd $(HOME_TEACHER_CORE) && pnpm install --no-frozen-lockfile
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
 build-repos:
 	@echo "$(BLUE)🔨 drawing-common をビルド中...$(NC)"
-	@cd repos/drawing-common && pnpm run build
+	@cd $(DRAWING_COMMON) && pnpm run build
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
 ## build: すべてビルド（依存リポジトリのみ）
@@ -82,30 +109,30 @@ build: build-repos
 ## build:kids: Kids版をビルド
 build\:kids:
 	@echo "$(BLUE)🏠 HomeTeacher (Kids版) をビルド中...$(NC)"
-	@cd repos/home-teacher-core && pnpm run build:kids
+	@cd $(HOME_TEACHER_CORE) && pnpm run build:kids
 	@echo "$(GREEN)✅ Kids版のビルドが完了しました$(NC)"
 
 ## build:discuss: Discuss版をビルド
 build\:discuss:
 	@echo "$(BLUE)🏠 HomeTeacher (Discuss版) をビルド中...$(NC)"
-	@cd repos/home-teacher-core && pnpm run build:discuss
+	@cd $(HOME_TEACHER_CORE) && pnpm run build:discuss
 	@echo "$(GREEN)✅ Discuss版のビルドが完了しました$(NC)"
 
 ## build:all: すべてのバージョンをビルド
 build\:all:
 	@echo "$(BLUE)🏠 HomeTeacher (全バージョン) をビルド中...$(NC)"
-	@cd repos/home-teacher-core && pnpm run build:all
+	@cd $(HOME_TEACHER_CORE) && pnpm run build:all
 	@echo "$(GREEN)✅ 全バージョンのビルドが完了しました$(NC)"
 
 ## dev: 開発モードで起動
 dev: clone install
 	@echo "$(BLUE)🚀 開発サーバーを起動中...$(NC)"
-	@cd repos/home-teacher-core && pnpm run dev
+	@cd $(HOME_TEACHER_CORE) && pnpm run dev
 
 ## dev:discuss: Discuss版を開発モードで起動
 dev\:discuss: clone install
 	@echo "$(BLUE)🚀 Discuss版 開発サーバーを起動中...$(NC)"
-	@cd repos/home-teacher-core && pnpm run dev:discuss
+	@cd $(HOME_TEACHER_CORE) && pnpm run dev:discuss
 
 ## clean: ビルド成果物を削除（依存リポジトリは保持）
 clean:
