@@ -1,7 +1,7 @@
 # HomeTeacher プロジェクト Makefile
 # 依存リポジトリを自動cloneして統合ビルドを行う
 
-.PHONY: help setup clone pull install build clean dev test status
+.PHONY: help setup clone pull install build clean dev test status update-versions
 
 # ============================================
 # リポジトリ定義
@@ -175,3 +175,8 @@ test:
 			cd $(REPOS_DIR)/$(name) && pnpm test || true; \
 		fi; \
 	)
+
+## update-versions: サブリポジトリのコミットIDをVERSIONSファイルに記録
+update-versions:
+	@bash scripts/update-versions.sh
+
