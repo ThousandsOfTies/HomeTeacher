@@ -72,7 +72,7 @@ install: clone
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
 build-repos: install
 	@echo "$(BLUE)🔨 drawing-common をビルド中...$(NC)"
-	@npm exec --workspace=@thousands-of-ties/drawing-common -- tsc --typeRoots $(CURDIR)/node_modules/@types
+	@cd repos/drawing-common && npx -p typescript tsc --typeRoots $(CURDIR)/node_modules/@types
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
 ## build: すべてビルド（依存リポジトリのみ）
