@@ -70,7 +70,7 @@ install: clone
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
-build-repos: install
+build-repos:
 	@echo "$(BLUE)🔨 drawing-common をビルド中...$(NC)"
 	@cd repos/drawing-common && pnpm run build
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
@@ -80,19 +80,19 @@ build: build-repos
 	@echo "$(GREEN)✅ すべてのビルドが完了しました$(NC)"
 
 ## build:kids: Kids版をビルド
-build\:kids: build-repos
+build\:kids:
 	@echo "$(BLUE)🏠 HomeTeacher (Kids版) をビルド中...$(NC)"
 	@cd repos/home-teacher-core && pnpm run build:kids
 	@echo "$(GREEN)✅ Kids版のビルドが完了しました$(NC)"
 
 ## build:discuss: Discuss版をビルド
-build\:discuss: build-repos
+build\:discuss:
 	@echo "$(BLUE)🏠 HomeTeacher (Discuss版) をビルド中...$(NC)"
 	@cd repos/home-teacher-core && pnpm run build:discuss
 	@echo "$(GREEN)✅ Discuss版のビルドが完了しました$(NC)"
 
 ## build:all: すべてのバージョンをビルド
-build\:all: build-repos
+build\:all:
 	@echo "$(BLUE)🏠 HomeTeacher (全バージョン) をビルド中...$(NC)"
 	@cd repos/home-teacher-core && pnpm run build:all
 	@echo "$(GREEN)✅ 全バージョンのビルドが完了しました$(NC)"
