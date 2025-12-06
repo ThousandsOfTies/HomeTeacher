@@ -27,6 +27,11 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Configure Git for private repos
         run: |
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
@@ -42,11 +47,10 @@ jobs:
           echo "=== Workspace structure ==="
           ls -la repos/
           echo "=== drawing-common node_modules ==="
-          ls -la repos/drawing-common/node_modules/ | head -20
+          ls -la repos/drawing-common/node_modules/ | head -20 || echo "No local node_modules"
           echo "=== Check @types/react ==="
-          ls -la repos/drawing-common/node_modules/@types/ || echo "No @types in drawing-common"
-          echo "=== Check root node_modules ==="
-          ls -la node_modules/@types/ | head -20
+          ls -la repos/drawing-common/node_modules/@types/react/ || echo "Checking via pnpm..."
+          pnpm --filter @thousands-of-ties/drawing-common exec ls node_modules/@types/react/ || echo "Types check done"
 
       - name: Build dependencies
         run: make build-repos
