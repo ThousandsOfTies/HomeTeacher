@@ -64,9 +64,9 @@ pull:
 ## install: すべての依存関係をインストール（各リポジトリ個別）
 install: clone
 	@echo "$(BLUE)📦 drawing-common の依存関係をインストール中...$(NC)"
-	@cd repos/drawing-common && pnpm install
+	@cd repos/drawing-common && pnpm install --no-frozen-lockfile
 	@echo "$(BLUE)📦 home-teacher-core の依存関係をインストール中...$(NC)"
-	@cd repos/home-teacher-core && pnpm install
+	@cd repos/home-teacher-core && pnpm install --no-frozen-lockfile
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
