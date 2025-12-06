@@ -64,7 +64,7 @@ pull:
 ## install: すべての依存関係をインストール（pnpm使用）
 install: clone
 	@echo "$(BLUE)📦 依存関係をインストール中（pnpm）...$(NC)"
-	@pnpm install
+	@pnpm install --shamefully-hoist
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
