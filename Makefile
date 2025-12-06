@@ -91,15 +91,15 @@ pull:
 ## install: すべての依存関係をインストール（各リポジトリ個別）
 install: clone
 	@echo "$(BLUE)📦 $(DRAWING_COMMON) の依存関係をインストール中...$(NC)"
-	@cd $(DRAWING_COMMON) && pnpm install --no-frozen-lockfile
+	@cd $(DRAWING_COMMON) && npm install
 	@echo "$(BLUE)📦 $(HOME_TEACHER_CORE) の依存関係をインストール中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && pnpm install --no-frozen-lockfile
+	@cd $(HOME_TEACHER_CORE) && npm install
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
 build-repos:
 	@echo "$(BLUE)🔨 $(DRAWING_COMMON) をビルド中...$(NC)"
-	@cd $(DRAWING_COMMON) && pnpm run build
+	@cd $(DRAWING_COMMON) && npm run build
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
 ## build: すべてビルド（依存リポジトリのみ）
@@ -109,30 +109,30 @@ build: build-repos
 ## build:kids: Kids版をビルド
 build\:kids:
 	@echo "$(BLUE)🏠 HomeTeacher (Kids版) をビルド中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && pnpm run build:kids
+	@cd $(HOME_TEACHER_CORE) && npm run build:kids
 	@echo "$(GREEN)✅ Kids版のビルドが完了しました$(NC)"
 
 ## build:discuss: Discuss版をビルド
 build\:discuss:
 	@echo "$(BLUE)🏠 HomeTeacher (Discuss版) をビルド中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && pnpm run build:discuss
+	@cd $(HOME_TEACHER_CORE) && npm run build:discuss
 	@echo "$(GREEN)✅ Discuss版のビルドが完了しました$(NC)"
 
 ## build:all: すべてのバージョンをビルド
 build\:all:
 	@echo "$(BLUE)🏠 HomeTeacher (全バージョン) をビルド中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && pnpm run build:all
+	@cd $(HOME_TEACHER_CORE) && npm run build:all
 	@echo "$(GREEN)✅ 全バージョンのビルドが完了しました$(NC)"
 
 ## dev: 開発モードで起動
 dev: clone install
 	@echo "$(BLUE)🚀 開発サーバーを起動中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && pnpm run dev
+	@cd $(HOME_TEACHER_CORE) && npm run dev
 
 ## dev:discuss: Discuss版を開発モードで起動
 dev\:discuss: clone install
 	@echo "$(BLUE)🚀 Discuss版 開発サーバーを起動中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && pnpm run dev:discuss
+	@cd $(HOME_TEACHER_CORE) && npm run dev:discuss
 
 ## clean: ビルド成果物を削除（依存リポジトリは保持）
 clean:
@@ -172,7 +172,7 @@ test:
 	@$(foreach name,$(REPO_NAMES), \
 		if [ -f "$(REPOS_DIR)/$(name)/package.json" ]; then \
 			echo "$(BLUE)🧪 $(name) のテスト実行中...$(NC)"; \
-			cd $(REPOS_DIR)/$(name) && pnpm test || true; \
+			cd $(REPOS_DIR)/$(name) && npm test || true; \
 		fi; \
 	)
 
