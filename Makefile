@@ -65,6 +65,8 @@ pull:
 install: clone
 	@echo "$(BLUE)📦 依存関係をインストール中（npm workspaces）...$(NC)"
 	@npm install
+	@echo "$(BLUE)📦 TypeScript型定義をインストール中...$(NC)"
+	@npm install --save-dev @types/react@18 @types/react-dom@18
 	@echo "$(GREEN)✅ インストール完了$(NC)"
 
 ## build-repos: 依存リポジトリをビルド（drawing-commonのみ）
