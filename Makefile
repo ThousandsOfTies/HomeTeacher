@@ -53,8 +53,8 @@ help:
 	@echo "  $(REPO_NAMES)"
 	@echo ""
 
-## setup: 初回セットアップ（clone + install + build）
-setup: clone install build-repos
+## setup: 初回セットアップ（clone + pull + install + build）
+setup: clone pull install build-repos
 	@echo "$(GREEN)✅ セットアップ完了！$(NC)"
 	@echo "$(BLUE)開発を開始するには: make dev$(NC)"
 
