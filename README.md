@@ -1,5 +1,6 @@
 # HomeTeacher
 
+
 **メタリポジトリ - 統合管理・ビルド・デプロイ専用**
 
 AI-powered learning support app with handwriting and PDF annotation features.
