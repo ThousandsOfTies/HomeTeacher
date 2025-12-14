@@ -18,6 +18,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+      VITE_API_URL: https://hometeacher-api-n5ja4qrrqq-an.a.run.app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,8 +54,6 @@ jobs:
 
       - name: Build Kids version
         run: make build:kids
-        env:
-          NODE_ENV: production
 
       - name: Move Kids build to deploy directory
         run: |
@@ -61,8 +62,6 @@ jobs:
 
       - name: Build Discuss version
         run: make build:discuss
-        env:
-          NODE_ENV: production
 
       - name: Move Discuss build to deploy/discuss
         run: |
