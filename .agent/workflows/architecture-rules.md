@@ -116,6 +116,89 @@ app.use(cors({
 
 ---
 
+## 📁 ワークスペース構造（重要）
+
+```
+HomeTeacher/                    ← メタリポジトリ（このリポジトリ）
+├── .agent/workflows/           ← AIエージェント用ルール
+├── .github/workflows/          ← GitHub Actions
+├── repos/                      ← ⚠️ 依存リポジトリ（.gitignoreで除外）
+│   ├── drawing-common/         ← 描画ライブラリ
+│   └── home-teacher-core/      ← 🔴 メインアプリ（ここで作業する）
+├── VERSIONS                    ← 依存リポジトリのコミットID
+└── Makefile                    ← ビルド・更新コマンド
+```
+
+### ⚠️ 重要なルール
+
+1. **`repos/` ディレクトリは .gitignore で除外されている**
+   - `HomeTeacher` リポジトリには含まれない
+   - 各サブリポジトリは独立したGitリポジトリ
+
+2. **作業は必ず `repos/home-teacher-core/` で行う**
+   - ❌ 別の場所にクローンして作業しない
+   - ❌ `home-teacher-core-fix` のような一時フォルダを作らない
+
+3. **VERSIONSファイルは手動で編集しない**
+   - ✅ `make update-versions` を使う
+
+---
+
+## 📝 依存リポジトリ (home-teacher-core) の編集手順
+
+### 1. 変更を行う
+
+```bash
+cd HomeTeacher/repos/home-teacher-core
+# ファイルを編集
+```
+
+### 2. 変更をコミット＆プッシュ（home-teacher-core）
+
+```bash
+cd HomeTeacher/repos/home-teacher-core
+git add .
+git commit -m "説明的なコミットメッセージ"
+git push origin main
+```
+
+### 3. VERSIONS を更新（HomeTeacher メタリポジトリ）
+
+```bash
+cd HomeTeacher
+make update-versions
+```
+
+### 4. HomeTeacher にコミット＆プッシュ
+
+```bash
+cd HomeTeacher
+git add VERSIONS
+git commit -m "chore: Update home-teacher-core to [コミットID]"
+git push origin main
+```
+
+### 5. GitHub Actions が自動デプロイ
+
+push により自動的に GitHub Pages にデプロイされます。
+
+---
+
+## 🚫 やってはいけないこと
+
+1. **VERSIONSファイルを手動編集しない**
+   - `scripts/update-versions.sh` が `repos/` からコミットIDを取得する
+   - 手動編集すると、実際のコードとVERSIONSが不一致になる
+
+2. **`repos/` 以外の場所でサブリポジトリを編集しない**
+   - `make update-versions` が正しく動作しなくなる
+   - VERSIONSとの整合性が取れなくなる
+
+3. **サブリポジトリの変更をプッシュせずにVERSIONSを更新しない**
+   - ローカルのコミットIDがVERSIONSに記録されても、リモートにない
+
+---
+
 ## 📋 修正前チェックリスト
 
 1. [ ] この変更は「絶対に変更してはいけないもの」に該当しないか？
