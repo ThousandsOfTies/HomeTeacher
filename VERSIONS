@@ -1,5 +1,5 @@
-# 萓晏ｭ倥Μ繝昴ず繝医Μ縺ｮ繝舌�ｼ繧ｸ繝ｧ繝ｳ
-# 譖ｴ譁ｰ: make update-versions
+# 依存リポジトリのバージョン
+# 更新: make update-versions
 
-drawing-common=278f59d4710c14465b91d8cf5076ac4b3399acdc
-home-teacher-core=926d70875b76056aa7b5bf351cc9f8ffc97c2986
+drawing-common=a589b58966cc8fd41b483eaf6b6b03a5154f1387
+home-teacher-core=25c04256edae3af47f02bd732135bf222ac305b3
