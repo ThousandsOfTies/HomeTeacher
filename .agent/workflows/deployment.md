@@ -1,3 +1,7 @@
+---
+description: デプロイスクリプトと手順（GitHub Pages & Cloud Run）
+---
+
 # TutoTuto - デプロイガイド
 
 このガイドでは、TutoTutoアプリをGitHub Pages（フロントエンド）とGoogle Cloud Run（バックエンドAPI）にデプロイする手順を説明します。
