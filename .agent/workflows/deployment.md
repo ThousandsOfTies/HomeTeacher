@@ -49,10 +49,26 @@ description: デプロイスクリプトと手順（GitHub Pages & Cloud Run）
 mainブランチにプッシュするだけで自動的にデプロイされます：
 
 ```bash
+# 1. 各サブリポジトリで変更をコミット・プッシュ
+cd repos/drawing-common
+git add . && git commit -m "feat: 新機能を追加"
+git push origin main
+
+cd ../home-teacher-core
+git add . && git commit -m "feat: 新機能を追加"
+git push origin main
+
+# 2. メタリポジトリでバージョンを更新
+cd ../..
+make update-versions
+
+# 3. メタリポジトリの変更をコミット・プッシュ
 git add .
-git commit -m "update: 新機能を追加"
+git commit -m "chore: サブリポジリのバージョンを更新"
 git push origin main
 ```
+
+**注意**: `make update-versions` は各サブリポジトリの最新コミットIDを `VERSIONS` ファイルに記録します。これにより、メタリポジトリがサブリポジトリのどのバージョンと連携しているかを追跡できます。
 
 ### 手動デプロイ（gh-pagesブランチ使用）
 
