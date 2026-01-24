@@ -103,36 +103,15 @@ build-repos:
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
 ## build: すべてビルド（依存リポジトリ + アプリケーション）
-build: build-repos build:kids
+build: build-repos
+	@echo "$(BLUE)🏠 HomeTeacher をビルド中...$(NC)"
+	@cd $(HOME_TEACHER_CORE) && npm run build
 	@echo "$(GREEN)✅ すべてのビルドが完了しました$(NC)"
-
-## build:kids: Kids版をビルド
-build\:kids:
-	@echo "$(BLUE)🏠 HomeTeacher (Kids版) をビルド中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && npm run build:kids
-	@echo "$(GREEN)✅ Kids版のビルドが完了しました$(NC)"
-
-## build:discuss: Discuss版をビルド
-build\:discuss:
-	@echo "$(BLUE)🏠 HomeTeacher (Discuss版) をビルド中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && npm run build:discuss
-	@echo "$(GREEN)✅ Discuss版のビルドが完了しました$(NC)"
-
-## build:all: すべてのバージョンをビルド
-build\:all:
-	@echo "$(BLUE)🏠 HomeTeacher (全バージョン) をビルド中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && npm run build:all
-	@echo "$(GREEN)✅ 全バージョンのビルドが完了しました$(NC)"
 
 ## dev: 開発モードで起動
 dev: clone install
 	@echo "$(BLUE)🚀 開発サーバーを起動中...$(NC)"
 	@cd $(HOME_TEACHER_CORE) && npm run dev
-
-## dev:discuss: Discuss版を開発モードで起動
-dev\:discuss: clone install
-	@echo "$(BLUE)🚀 Discuss版 開発サーバーを起動中...$(NC)"
-	@cd $(HOME_TEACHER_CORE) && npm run dev:discuss
 
 ## clean: ビルド成果物を削除（依存リポジトリは保持）
 clean:
