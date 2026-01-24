@@ -39,37 +39,17 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Verify workspace structure
-        run: |
-          echo "=== Workspace structure ==="
-          ls -la repos/
-          echo "=== drawing-common node_modules ==="
-          ls -la repos/drawing-common/node_modules/ | head -20 || echo "No local node_modules"
-          echo "=== Check @types/react ==="
-          ls -la repos/drawing-common/node_modules/@types/react/ || echo "Types not found"
-
-      - name: Build dependencies
-        run: make build-repos
-
-      - name: Build Kids version
-        run: make build:kids
+      # ここを変更：make build一発で済ませる
+      - name: Build Application
+        run: make build
         env:
           NODE_ENV: production
 
-      - name: Move Kids build to deploy directory
+      # ここも変更：make buildの結果は dist に出力されるのでそれを deploy へ
+      - name: Move build to deploy directory
         run: |
           mkdir -p deploy
           cp -r repos/home-teacher-core/dist/* deploy/
-
-      - name: Build Discuss version
-        run: make build:discuss
-        env:
-          NODE_ENV: production
-
-      - name: Move Discuss build to deploy/discuss
-        run: |
-          mkdir -p deploy/discuss
-          cp -r repos/home-teacher-core/dist/* deploy/discuss/
 
       - name: Add .nojekyll file
         run: touch deploy/.nojekyll
