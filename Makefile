@@ -102,8 +102,8 @@ build-repos:
 	@cd $(DRAWING_COMMON) && npm run build
 	@echo "$(GREEN)✅ 依存リポジトリのビルド完了$(NC)"
 
-## build: すべてビルド（依存リポジトリのみ）
-build: build-repos
+## build: すべてビルド（依存リポジトリ + アプリケーション）
+build: build-repos build:kids
 	@echo "$(GREEN)✅ すべてのビルドが完了しました$(NC)"
 
 ## build:kids: Kids版をビルド
