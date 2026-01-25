@@ -7,28 +7,11 @@ AI-powered learning support app with handwriting and PDF annotation features.
 
 ## 🎯 Versions
 
-### 📚 TutoTuto (Kids Version)
-小学生向け。AI採点とSNS報酬機能付き。
+### 📚 TutoTuto
+AI採点とSNS報酬機能付き。
 
 **[Launch TutoTuto →](https://thousandsofties.github.io/HomeTeacher/)**
 
-### 💼 TutoTuto Discuss (Adult Version)
-大学生・社会人向け。ノート取りとディスカッションに特化。
-
-**[Launch TutoTuto Discuss →](https://thousandsofties.github.io/HomeTeacher/discuss/)**
-
-## ✨ Features
-
-- 📝 **PDF Annotation**: Apple Pencilで直接PDFに書き込み
-- 🔄 **Scratch to Erase**: スクラッチして線を消去
-- ✅ **AI Grading** (Kids版のみ): 自動宿題採点
-- 🎮 **SNS Rewards** (Kids版のみ): 課題完了でSNS解除
-- 💾 **Auto-save**: 自動保存
-- 📱 **PWA Support**: スタンドアロンアプリとしてインストール可能
-
-## 🏗️ プロジェクト構成
-
-```
 HomeTeacher/ (このリポジトリ - メタリポジトリ)
 ├── package.json        # メタデータのみ
 ├── Makefile            # 統合ビルド管理
@@ -54,36 +37,14 @@ HomeTeacher/ (このリポジトリ - メタリポジトリ)
 git clone https://github.com/ThousandsOfTies/HomeTeacher.git
 cd HomeTeacher
 make setup
-```
 
 ### 開発
 
-```bash
-make dev              # Kids版を開発モードで起動
-make dev:discuss      # Discuss版を開発モードで起動
-```
-
-ブラウザで http://localhost:3000 が自動的に開きます。
-
-### ビルド
-
-```bash
-make build:kids       # Kids版のみビルド
-make build:discuss    # Discuss版のみビルド
-make build:all        # 全バージョンをビルド
-```
-
-### その他のコマンド
-
-```bash
-make help             # ヘルプ表示
-make clone            # 依存リポジトリをクローン
-make pull             # 依存リポジトリを最新に更新
+make dev              # 開発モードで起動
 make install          # すべての依存関係をインストール
 make clean            # ビルド成果物を削除
 make clean-all        # 完全削除（repos/含む）
 make status           # すべてのリポジトリのgitステータス表示
-```
 
 ## 📤 GitHub Pagesへのデプロイ
 
