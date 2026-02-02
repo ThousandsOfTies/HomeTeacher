@@ -32,3 +32,8 @@ git push origin main
 ## Troubleshooting
 - If `git push origin main` says "Everything up-to-date" but changes aren't live, check if you forgot step 2.
 - Verify `VERSIONS` file in the parent root to see if the commit hash matches the latest `home-teacher-core` commit.
+
+## ⚠️ Important Verification Step
+After running the push command in Step 2, **ALWAYS run `git status`** to confirm that the working tree is clean.
+Sometimes, `git add .` might capture files (like this workflow documentation) that `git commit` misses if run in a quick sequence without proper checks.
+**If `git status` shows staged changes, commit and push them explicitly.**
