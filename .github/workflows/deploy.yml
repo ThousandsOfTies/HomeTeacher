@@ -55,7 +55,9 @@ jobs:
 
       # ここを変更：make build一発で済ませる
       - name: Build Application
-        run: make build
+        run: |
+          rm -rf repos/home-teacher-core/dist
+          make build
         env:
           NODE_ENV: production
 
