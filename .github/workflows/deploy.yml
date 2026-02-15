@@ -51,7 +51,11 @@ jobs:
           fi
 
       - name: Install dependencies
-        run: make install
+        run: |
+          cd repos/home-teacher-core
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
+          cd ../..
 
       # ここを変更：make build一発で済ませる
       - name: Build Application
