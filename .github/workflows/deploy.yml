@@ -34,7 +34,21 @@ jobs:
           git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
           
       - name: Clone dependencies
-        run: make clone
+        run: |
+          make clone
+          
+          # Force checkout specific commit from VERSIONS file
+          # format in VERSIONS: repo_name=commit_hash
+          CORE_COMMIT=$(grep "home-teacher-core=" VERSIONS | cut -d'=' -f2)
+          if [ ! -z "$CORE_COMMIT" ]; then
+            echo "Checking out home-teacher-core at $CORE_COMMIT"
+            cd repos/home-teacher-core
+            git fetch origin $CORE_COMMIT
+            git checkout $CORE_COMMIT
+            cd ../..
+          else
+            echo "WARNING: No commit hash found for home-teacher-core in VERSIONS"
+          fi
 
       - name: Install dependencies
         run: make install
